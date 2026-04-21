@@ -19,7 +19,16 @@ class StorageService:
 
     def __init__(self) -> None:
         self.bucket_name = settings.r2_bucket_name
-        self.endpoint = settings.r2_endpoint.rstrip("/")
+        self.endpoint = (settings.r2_endpoint or "").rstrip("/")
+        self._client = None
+
+    def _get_client(self):
+        if self._client is not None:
+            return self._client
+
+        if not self.endpoint:
+            raise RuntimeError("R2_ENDPOINT is empty or missing")
+
         self._client = boto3.client(
             "s3",
             endpoint_url=self.endpoint,
@@ -28,12 +37,14 @@ class StorageService:
             config=Config(signature_version="s3v4"),
             region_name="auto",
         )
+        return self._client
 
     async def upload_file(self, file_bytes: bytes, filename: str, content_type: str, folder: str) -> str:
         key = f"{folder.strip('/')}/{filename}"
+        client = self._get_client()
         try:
             await asyncio.to_thread(
-                self._client.put_object,
+                client.put_object,
                 Bucket=self.bucket_name,
                 Key=key,
                 Body=file_bytes,
@@ -50,8 +61,9 @@ class StorageService:
         if not key:
             return False
 
+        client = self._get_client()
         try:
-            await asyncio.to_thread(self._client.delete_object, Bucket=self.bucket_name, Key=key)
+            await asyncio.to_thread(client.delete_object, Bucket=self.bucket_name, Key=key)
             return True
         except (BotoCoreError, ClientError):
             logger.exception("Failed to delete file from R2", extra={"url": r2_url, "key": key})
@@ -62,9 +74,10 @@ class StorageService:
         if not key:
             raise ValueError("Invalid R2 URL")
 
+        client = self._get_client()
         try:
             return await asyncio.to_thread(
-                self._client.generate_presigned_url,
+                client.generate_presigned_url,
                 "get_object",
                 Params={"Bucket": self.bucket_name, "Key": key},
                 ExpiresIn=expires_seconds,
