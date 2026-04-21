@@ -114,7 +114,7 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)) -
         await db.commit()
         process_fix_rejection.delay(str(report.id))
     elif event_type == "payment_intent.payment_failed":
-        report.status = "failed"
+        report.status = FixRejectionStatus.failed
         await db.commit()
 
     return {"received": True}

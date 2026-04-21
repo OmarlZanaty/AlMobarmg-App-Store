@@ -109,6 +109,7 @@ async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db))
 
     new_user = User(
         email=email,
+        name=payload.name.strip(),
         password_hash=hash_password(payload.password),
         role=UserRole.developer,
     )
@@ -138,7 +139,7 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)) -> Lo
         )
 
     access_token = create_access_token(str(user.id), user.role.value)
-    refresh_token = create_refresh_token(str(user.id))
+    refresh_token = create_refresh_token(str(user.id), user.role.value)
     await store_refresh_token(str(user.id), refresh_token)
 
     return LoginResponse(
@@ -148,7 +149,7 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)) -> Lo
         user=UserResponse(
             id=str(user.id),
             email=user.email,
-            name=getattr(user, "name", user.email.split("@")[0]),
+            name=user.name,
             role=user.role,
             subscription_plan=user.subscription_plan.value,
         ),
@@ -168,7 +169,9 @@ async def refresh_tokens(payload: RefreshRequest) -> RefreshResponse:
     if not await verify_refresh_token(user_id, payload.refresh_token):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh token expired or revoked")
 
-    role = token_payload.get("role", UserRole.developer.value)
+    role = token_payload.get("role")
+    if role is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
     access_token = create_access_token(user_id, role)
     return RefreshResponse(access_token=access_token, token_type="bearer")
 
@@ -200,7 +203,7 @@ async def verify_email(payload: VerifyEmailRequest, db: AsyncSession = Depends(g
     user.is_email_verified = True
     await db.commit()
     await redis_client.delete(f"otp:{email}")
-    await send_welcome_email(user.email, getattr(user, "name", user.email.split("@")[0]))
+    await send_welcome_email(user.email, user.name)
 
     return MessageResponse(message="Email verified")
 
@@ -217,7 +220,7 @@ async def resend_verification(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     otp = await generate_otp(email)
-    await send_verification_email(email=email, otp=otp, name=getattr(user, "name", user.email.split("@")[0]))
+    await send_verification_email(email=email, otp=otp, name=user.name)
     return MessageResponse(message="Verification email sent")
 
 

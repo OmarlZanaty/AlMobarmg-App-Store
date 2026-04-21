@@ -12,7 +12,10 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from backend.config import settings
 from backend.database import engine
+from backend.routers.admin import router as admin_router
+from backend.routers.apps import router as apps_router
 from backend.routers.auth import router as auth_router
+from backend.routers.payments import router as payments_router
 from backend.services.auth_service import redis_client
 
 
@@ -39,6 +42,9 @@ app.add_middleware(
 )
 
 app.include_router(auth_router)
+app.include_router(apps_router)
+app.include_router(admin_router)
+app.include_router(payments_router)
 
 
 @app.exception_handler(HTTPException)

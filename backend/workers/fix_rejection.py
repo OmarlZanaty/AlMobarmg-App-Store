@@ -10,7 +10,6 @@ from typing import Any
 
 import httpx
 import resend
-from celery import Celery
 from sqlalchemy import select
 
 from backend.config import settings
@@ -19,12 +18,10 @@ from backend.models.enums import FixRejectionStatus
 from backend.models.fix_rejection_report import FixRejectionReport
 from backend.models.user import User
 from backend.services.storage_service import storage_service
+from backend.workers.celery_app import celery_app
 from backend.workers.security_scan import _mobsf_scan, _virustotal_scan
 
 logger = logging.getLogger(__name__)
-
-celery_app = Celery("fix_rejection", broker=settings.redis_url, backend=settings.redis_url)
-
 
 async def _download_to_temp(url: str, destination: Path) -> None:
     signed = await storage_service.generate_signed_url(url, expires_seconds=1800)
@@ -176,7 +173,7 @@ async def _process(report_id: str) -> None:
         except Exception as exc:
             logger.exception("Fix rejection processing failed", extra={"report_id": report_id})
             report.ai_diagnosis = {"error": str(exc)}
-            report.status = "failed"
+            report.status = FixRejectionStatus.failed
             await db.commit()
 
     if temp_file and temp_file.exists():

@@ -11,7 +11,6 @@ from typing import Any
 
 import httpx
 import resend
-from celery import Celery
 from sqlalchemy import select
 
 from backend.config import settings
@@ -21,10 +20,10 @@ from backend.models.enums import AppStatus, RiskLevel
 from backend.models.security_report import SecurityReport
 from backend.models.user import User
 from backend.services.storage_service import storage_service
+from backend.workers.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
 
-celery_app = Celery("security_scan", broker=settings.redis_url, backend=settings.redis_url)
 DANGEROUS_PERMISSIONS = {
     "SEND_SMS",
     "READ_CONTACTS",

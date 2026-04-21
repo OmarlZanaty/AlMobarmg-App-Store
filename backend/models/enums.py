@@ -55,3 +55,4 @@ class FixRejectionStatus(str, enum.Enum):
     pending_payment = "pending_payment"
     processing = "processing"
     completed = "completed"
+    failed = "failed"
