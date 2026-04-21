@@ -1,16 +1,29 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PROJECT_DIR="/home/ubuntu/almobarmg"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="${PROJECT_DIR:-$SCRIPT_DIR}"
 VENV_PATH="/home/ubuntu/venv/bin/activate"
 SYSTEMD_DIR="/etc/systemd/system"
 NGINX_AVAILABLE="/etc/nginx/sites-available/almobarmg"
 NGINX_ENABLED="/etc/nginx/sites-enabled/almobarmg"
+LEGACY_PATH="/home/ubuntu/almobarmg"
+
+if [ ! -d "$PROJECT_DIR/backend" ] || [ ! -f "$PROJECT_DIR/backend/main.py" ]; then
+  echo "Error: PROJECT_DIR '$PROJECT_DIR' does not look like the app repository root."
+  echo "Expected to find backend/main.py. Clone/sync the repository first."
+  exit 1
+fi
 
 echo "Creating web root..."
 sudo mkdir -p /var/www/almobarmg
 sudo chown -R ubuntu:ubuntu /var/www/almobarmg
 sudo chmod -R 755 /var/www/almobarmg
+
+echo "Ensuring legacy service path exists (${LEGACY_PATH})..."
+if [ "$PROJECT_DIR" != "$LEGACY_PATH" ]; then
+  sudo ln -sfn "$PROJECT_DIR" "$LEGACY_PATH"
+fi
 
 cd "$PROJECT_DIR"
 source "$VENV_PATH"

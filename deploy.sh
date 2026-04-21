@@ -1,12 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PROJECT_DIR="/home/ubuntu/almobarmg"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="${PROJECT_DIR:-$SCRIPT_DIR}"
 VENV_PATH="/home/ubuntu/venv/bin/activate"
 WEB_ROOT="/var/www/almobarmg"
 SYSTEMD_DIR="/etc/systemd/system"
 
 cd "$PROJECT_DIR"
+
+if [ ! -d backend ] || [ ! -f backend/main.py ]; then
+  echo "Error: PROJECT_DIR '$PROJECT_DIR' does not look like the app repository root."
+  echo "Expected to find backend/main.py. Clone/sync the repository first."
+  exit 1
+fi
 
 echo "[1/11] Pulling latest code..."
 git pull --ff-only
