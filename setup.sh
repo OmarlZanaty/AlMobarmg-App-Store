@@ -28,9 +28,6 @@ fi
 cd "$PROJECT_DIR"
 source "$VENV_PATH"
 
-echo "Running database migrations..."
-python -m backend.migrations.run
-
 echo "Installing systemd services..."
 sudo cp "$PROJECT_DIR/etc/systemd/system/almobarmg-api.service" "$SYSTEMD_DIR/almobarmg-api.service"
 sudo cp "$PROJECT_DIR/etc/systemd/system/almobarmg-worker.service" "$SYSTEMD_DIR/almobarmg-worker.service"
@@ -52,12 +49,27 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now almobarmg-api.service
 sudo systemctl enable --now almobarmg-worker.service
 
+echo "Running database migrations..."
+python -m backend.migrations.run
+
 echo "Verifying services..."
 sudo systemctl --no-pager --full status almobarmg-api.service
 sudo systemctl --no-pager --full status almobarmg-worker.service
 sudo systemctl --no-pager --full status nginx.service
 
 echo "Health check (/health)..."
-curl -fsS http://127.0.0.1:8080/health
+health_ok=0
+for _ in {1..15}; do
+  if curl -fsS http://127.0.0.1:8080/health >/dev/null; then
+    curl -fsS http://127.0.0.1:8080/health
+    health_ok=1
+    break
+  fi
+  sleep 2
+done
+if [ "$health_ok" -ne 1 ]; then
+  echo "Health check failed after retries."
+  exit 1
+fi
 
 echo "Initial setup completed successfully."

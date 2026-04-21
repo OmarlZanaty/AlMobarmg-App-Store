@@ -25,27 +25,32 @@ echo "[3/11] Installing Python dependencies..."
 pip install --upgrade pip
 pip install -r requirements.txt
 
-echo "[4/11] Running database migrations..."
-python -m backend.migrations.run
-
-echo "[5/11] Building Flutter web release..."
-cd frontend
-flutter pub get
-flutter build web --release
-
-echo "[6/11] Syncing Flutter web build to ${WEB_ROOT}..."
-sudo mkdir -p "$WEB_ROOT"
-sudo rsync -a --delete build/web/ "$WEB_ROOT"/
-
-cd "$PROJECT_DIR"
-
-echo "[7/11] Restarting API service..."
 if ! systemctl list-unit-files | grep -q '^almobarmg-api.service'; then
   echo "Installing missing systemd unit files..."
   sudo cp "$PROJECT_DIR/etc/systemd/system/almobarmg-api.service" "$SYSTEMD_DIR/almobarmg-api.service"
   sudo cp "$PROJECT_DIR/etc/systemd/system/almobarmg-worker.service" "$SYSTEMD_DIR/almobarmg-worker.service"
   sudo systemctl daemon-reload
 fi
+
+echo "[4/11] Running database migrations..."
+python -m backend.migrations.run
+
+echo "[5/11] Building Flutter web release..."
+if command -v flutter >/dev/null 2>&1; then
+  cd frontend
+  flutter pub get
+  flutter build web --release
+
+  echo "[6/11] Syncing Flutter web build to ${WEB_ROOT}..."
+  sudo mkdir -p "$WEB_ROOT"
+  sudo rsync -a --delete build/web/ "$WEB_ROOT"/
+else
+  echo "[6/11] Flutter SDK not found; skipping web build and sync."
+fi
+
+cd "$PROJECT_DIR"
+
+echo "[7/11] Restarting API service..."
 sudo systemctl restart almobarmg-api
 
 echo "[8/11] Restarting worker service..."
