@@ -40,10 +40,11 @@ def create_access_token(user_id: str, role: str) -> str:
     return jwt.encode(payload, settings.jwt_secret, algorithm="HS256")
 
 
-def create_refresh_token(user_id: str) -> str:
+def create_refresh_token(user_id: str, role: str) -> str:
     now = datetime.now(UTC)
     payload: dict[str, Any] = {
         "sub": user_id,
+        "role": role,
         "type": "refresh",
         "iat": now,
         "exp": now + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS),

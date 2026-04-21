@@ -23,6 +23,7 @@ class _DeveloperUploadScreenState extends ConsumerState<DeveloperUploadScreen> {
   int _step = 0;
 
   final _name = TextEditingController();
+  final _version = TextEditingController(text: '1.0.0');
   final _shortDescription = TextEditingController();
   final _description = TextEditingController();
   final _category = TextEditingController(text: 'Tools');
@@ -39,6 +40,7 @@ class _DeveloperUploadScreenState extends ConsumerState<DeveloperUploadScreen> {
   @override
   void dispose() {
     _name.dispose();
+    _version.dispose();
     _shortDescription.dispose();
     _description.dispose();
     _category.dispose();
@@ -73,6 +75,7 @@ class _DeveloperUploadScreenState extends ConsumerState<DeveloperUploadScreen> {
               title: const Text('Basic Info'),
               content: Column(children: [
                 TextFormField(controller: _name, decoration: const InputDecoration(labelText: 'App name'), validator: _required),
+                TextFormField(controller: _version, decoration: const InputDecoration(labelText: 'Version'), validator: _required),
                 TextFormField(
                   controller: _shortDescription,
                   decoration: const InputDecoration(labelText: 'Short description'),
@@ -132,6 +135,7 @@ class _DeveloperUploadScreenState extends ConsumerState<DeveloperUploadScreen> {
                 children: [
                   Text('Name: ${_name.text}'),
                   Text('Category: ${_category.text}'),
+                  Text('Version: ${_version.text}'),
                   Text('Android: ${_androidFile?.path.split('/').last ?? 'Not provided'}'),
                   Text('iOS PWA: ${_iosPwaUrl.text.isEmpty ? 'Not provided' : _iosPwaUrl.text}'),
                   Text('Windows: ${_windowsFile?.path.split('/').last ?? 'Not provided'}'),
@@ -192,6 +196,7 @@ class _DeveloperUploadScreenState extends ConsumerState<DeveloperUploadScreen> {
       await ref.read(apiServiceProvider).uploadApp(
             metadata: {
               'name': _name.text.trim(),
+              'version': _version.text.trim(),
               'short_description': _shortDescription.text.trim(),
               'description': _description.text.trim(),
               'category': _category.text.trim(),

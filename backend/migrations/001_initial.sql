@@ -7,11 +7,12 @@ CREATE TYPE risk_level AS ENUM ('safe', 'low', 'medium', 'high', 'critical');
 CREATE TYPE platform AS ENUM ('android', 'ios', 'windows', 'mac', 'linux', 'web');
 CREATE TYPE install_source AS ENUM ('store', 'api', 'direct');
 CREATE TYPE subscription_status AS ENUM ('active', 'cancelled', 'past_due');
-CREATE TYPE fix_rejection_status AS ENUM ('pending_payment', 'processing', 'completed');
+CREATE TYPE fix_rejection_status AS ENUM ('pending_payment', 'processing', 'completed', 'failed');
 
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email VARCHAR(255) UNIQUE NOT NULL,
+    name VARCHAR(255) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     role user_role NOT NULL DEFAULT 'user',
     is_email_verified BOOLEAN NOT NULL DEFAULT FALSE,

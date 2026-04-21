@@ -7,7 +7,7 @@ Type=simple
 User=ubuntu
 WorkingDirectory=/home/ubuntu/almobarmg
 EnvironmentFile=/home/ubuntu/.env
-ExecStart=/home/ubuntu/venv/bin/celery -A backend.workers.security_scan:celery_app worker --loglevel=info --concurrency=2
+ExecStart=/home/ubuntu/venv/bin/celery -A backend.workers.celery_app:celery_app worker --loglevel=info --concurrency=2
 Restart=always
 RestartSec=5
 
