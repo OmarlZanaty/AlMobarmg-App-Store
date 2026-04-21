@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:android_package_installer/android_package_installer.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -10,7 +9,6 @@ class InstallService {
   InstallService({Dio? dio}) : _dio = dio ?? Dio();
 
   final Dio _dio;
-  final AndroidPackageInstaller _installer = AndroidPackageInstaller();
 
   Future<void> installApp({
     required BuildContext context,
@@ -20,7 +18,7 @@ class InstallService {
     try {
       switch (platform.toLowerCase()) {
         case 'android':
-          await _installAndroid(context, app['android_download_url'] ?? app['android_signed_url']);
+          await _installAndroid(app['android_download_url'] ?? app['android_signed_url']);
           return;
         case 'iphone':
         case 'ios':
@@ -48,25 +46,20 @@ class InstallService {
   Future<bool> checkInstallPermission(BuildContext context) async {
     if (!Platform.isAndroid) return true;
 
-    final canInstall = await _installer.canRequestPackageInstalls();
-    if (canInstall == true) return true;
-
     final shouldProceed = await showDialog<bool>(
           context: context,
           builder: (ctx) => AlertDialog(
-            title: const Text('Permission needed'),
-            content: const Text('To install Android apps in-app, allow Install Unknown Apps for Al Mobarmg Store.'),
+            title: const Text('Install APK'),
+            content: const Text('Android will ask for confirmation to install the APK file.'),
             actions: [
               TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-              ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Open settings')),
+              ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Continue')),
             ],
           ),
         ) ??
         false;
 
-    if (!shouldProceed) return false;
-    await _installer.openUnknownSourcesSettings();
-    return await _installer.canRequestPackageInstalls() == true;
+    return shouldProceed;
   }
 
   String getInstallButtonLabel(String platform) {
@@ -88,24 +81,21 @@ class InstallService {
     }
   }
 
-  Future<void> _installAndroid(BuildContext context, String? url) async {
+  Future<void> _installAndroid(String? url) async {
     if (url == null || url.isEmpty) throw Exception('Missing Android signed URL');
-    final allowed = await checkInstallPermission(context);
-    if (!allowed) throw Exception('Install permission denied');
-
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-    scaffoldMessenger.showSnackBar(const SnackBar(content: Text('Downloading APK...')));
 
     final tempPath = '/tmp/al_mobarmg_temp.apk';
-    await _dio.download(url, tempPath, onReceiveProgress: (received, total) {
-      if (total > 0) {
-        final progress = ((received / total) * 100).toStringAsFixed(0);
-        scaffoldMessenger.showSnackBar(SnackBar(content: Text('Download progress: $progress%')));
-      }
-    });
+    await _dio.download(url, tempPath);
 
-    await _installer.installApk(apkFilePath: tempPath);
-    Fluttertoast.showToast(msg: 'Installer launched');
+    final apkUri = Uri.file(tempPath);
+    final launched = await launchUrl(apkUri, mode: LaunchMode.externalApplication);
+    if (!launched) {
+      final downloadUri = Uri.parse(url);
+      final fallbackLaunched = await launchUrl(downloadUri, mode: LaunchMode.externalApplication);
+      if (!fallbackLaunched) throw Exception('Could not open Android installer');
+    }
+
+    Fluttertoast.showToast(msg: 'APK ready. Follow Android prompts to complete installation.');
   }
 
   Future<void> _openIosPwa(BuildContext context, String? pwaUrl) async {
@@ -114,6 +104,7 @@ class InstallService {
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       throw Exception('Could not launch Safari');
     }
+    if (!context.mounted) return;
     await showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,

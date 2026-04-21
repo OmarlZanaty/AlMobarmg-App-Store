@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  backend-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Validate backend config
+        env:
+          TEST_ENV: '1'
+        run: python -c "from backend.config import settings; print('Config OK')"
+
+      - name: Compile key backend routers
+        run: >-
+          python -m py_compile
+          backend/main.py
+          backend/routers/auth.py
+          backend/routers/apps.py
+          backend/routers/admin.py
+          backend/routers/payments.py
+
+      - name: Compile worker modules
+        run: >-
+          python -m py_compile
+          backend/workers/security_scan.py
+          backend/workers/fix_rejection.py
+
+  flutter-analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install Flutter dependencies
+        working-directory: frontend
+        run: flutter pub get
+
+      - name: Analyze Flutter code
+        working-directory: frontend
+        run: flutter analyze --no-fatal-infos
+
+      - name: Build Flutter web
+        working-directory: frontend
+        run: flutter build web --release
