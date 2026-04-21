@@ -18,10 +18,11 @@ from backend.models.enums import FixRejectionStatus
 from backend.models.fix_rejection_report import FixRejectionReport
 from backend.models.user import User
 from backend.services.storage_service import storage_service
-from backend.workers.celery_app import celery_app
+from backend.workers import celery_app
 from backend.workers.security_scan import _mobsf_scan, _virustotal_scan
 
 logger = logging.getLogger(__name__)
+
 
 async def _download_to_temp(url: str, destination: Path) -> None:
     signed = await storage_service.generate_signed_url(url, expires_seconds=1800)
