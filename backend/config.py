@@ -1,0 +1,52 @@
+from functools import lru_cache
+
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=("/home/ubuntu/.env", ".env"),
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",
+    )
+
+    database_url: str = Field(alias="DATABASE_URL")
+    redis_url: str = Field(alias="REDIS_URL")
+
+    jwt_secret: str = Field(alias="JWT_SECRET")
+    jwt_refresh_secret: str = Field(alias="JWT_REFRESH_SECRET")
+    jwt_expires_in: str = Field(alias="JWT_EXPIRES_IN")
+    jwt_refresh_expires_in: str = Field(alias="JWT_REFRESH_EXPIRES_IN")
+
+    mobsf_url: str = Field(alias="MOBSF_URL")
+    mobsf_api_key: str = Field(alias="MOBSF_API_KEY")
+    virustotal_api_key: str = Field(alias="VIRUSTOTAL_API_KEY")
+    anthropic_api_key: str = Field(alias="ANTHROPIC_API_KEY")
+
+    resend_api_key: str = Field(alias="RESEND_API_KEY")
+    email_from: str = Field(alias="EMAIL_FROM")
+
+    r2_account_id: str = Field(alias="R2_ACCOUNT_ID")
+    r2_access_key_id: str = Field(alias="R2_ACCESS_KEY_ID")
+    r2_secret_access_key: str = Field(alias="R2_SECRET_ACCESS_KEY")
+    r2_bucket_name: str = Field(alias="R2_BUCKET_NAME")
+    r2_endpoint: str = Field(alias="R2_ENDPOINT")
+
+    stripe_secret_key: str = Field(alias="STRIPE_SECRET_KEY")
+    stripe_webhook_secret: str = Field(alias="STRIPE_WEBHOOK_SECRET")
+
+    port: int = Field(default=8000, alias="PORT")
+    frontend_url: str = Field(alias="FRONTEND_URL")
+
+    max_file_size_mb: int = Field(default=500, alias="MAX_FILE_SIZE_MB")
+    free_plan_max_mb: int = Field(default=100, alias="FREE_PLAN_MAX_MB")
+
+
+@lru_cache(maxsize=1)
+def get_settings() -> Settings:
+    return Settings()
+
+
+settings = get_settings()
