@@ -46,6 +46,20 @@ if command -v flutter >/dev/null 2>&1; then
   sudo rsync -a --delete build/web/ "$WEB_ROOT"/
 else
   echo "[6/11] Flutter SDK not found; skipping web build and sync."
+  sudo mkdir -p "$WEB_ROOT"
+  if [ ! -f "$WEB_ROOT/index.html" ]; then
+    cat >/tmp/almobarmg-index.html <<'HTML'
+<!doctype html>
+<html>
+  <head><meta charset="utf-8"><title>Al Mobarmg Store</title></head>
+  <body style="font-family:Arial,sans-serif;padding:24px">
+    <h2>Al Mobarmg Store</h2>
+    <p>Flutter is not installed on this server, so the web build was skipped.</p>
+  </body>
+</html>
+HTML
+    sudo mv /tmp/almobarmg-index.html "$WEB_ROOT/index.html"
+  fi
 fi
 
 cd "$PROJECT_DIR"

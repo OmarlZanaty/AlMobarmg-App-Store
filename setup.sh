@@ -19,6 +19,19 @@ echo "Creating web root..."
 sudo mkdir -p /var/www/almobarmg
 sudo chown -R ubuntu:ubuntu /var/www/almobarmg
 sudo chmod -R 755 /var/www/almobarmg
+if [ ! -f /var/www/almobarmg/index.html ]; then
+  cat >/tmp/almobarmg-index.html <<'HTML'
+<!doctype html>
+<html>
+  <head><meta charset="utf-8"><title>Al Mobarmg Store</title></head>
+  <body style="font-family:Arial,sans-serif;padding:24px">
+    <h2>Al Mobarmg Store</h2>
+    <p>Web frontend is not built yet. Run deploy after installing Flutter SDK.</p>
+  </body>
+</html>
+HTML
+  sudo mv /tmp/almobarmg-index.html /var/www/almobarmg/index.html
+fi
 
 echo "Ensuring legacy service path exists (${LEGACY_PATH})..."
 if [ "$PROJECT_DIR" != "$LEGACY_PATH" ]; then
