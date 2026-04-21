@@ -18,7 +18,7 @@ class SecurityReportScreen extends ConsumerWidget {
         title: const Text('Security Report'),
         actions: [
           IconButton(
-            onPressed: () => Share.share('http://54.195.111.168/apps/$appId/security-report'),
+            onPressed: () => Share.share('http://34.242.156.156/apps/$appId/security-report'),
             icon: const Icon(Icons.share),
           )
         ],

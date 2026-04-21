@@ -1,6 +1,6 @@
 server {
     listen 80;
-    server_name 54.195.111.168 _;
+    server_name 34.242.156.156 _;
     client_max_body_size 600M;
 
     location /api {

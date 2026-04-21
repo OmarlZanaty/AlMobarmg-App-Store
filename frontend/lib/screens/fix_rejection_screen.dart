@@ -5,8 +5,9 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:stripe_flutter/stripe_flutter.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
 
+import '../main.dart';
 import '../services/api_service.dart';
 import 'developer/upload_screen.dart';
 import 'home_screen.dart';

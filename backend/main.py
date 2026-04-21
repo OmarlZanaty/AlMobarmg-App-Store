@@ -51,7 +51,7 @@ app = FastAPI(title="Al Mobarmg Store API", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     TrustedHostMiddleware,
-    allowed_hosts=["54.195.111.168", "localhost", "127.0.0.1"],
+    allowed_hosts=["34.242.156.156", "localhost", "127.0.0.1"],
 )
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RateLimitMiddleware)
