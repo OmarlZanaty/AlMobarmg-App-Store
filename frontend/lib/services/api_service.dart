@@ -8,9 +8,9 @@ class ApiService {
   ApiService({
     Dio? dio,
     FlutterSecureStorage? storage,
-    this.baseUrl = 'http://54.195.111.168/api',
+    this.baseUrl = 'http://34.242.156.156/api',
   })  : _storage = storage ?? const FlutterSecureStorage(),
-        _dio = dio ?? Dio(BaseOptions(baseUrl: 'http://54.195.111.168/api')) {
+        _dio = dio ?? Dio(BaseOptions(baseUrl: 'http://34.242.156.156/api')) {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
