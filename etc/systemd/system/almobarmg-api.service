@@ -1,0 +1,15 @@
+[Unit]
+Description=Al Mobarmg FastAPI API Service
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/almobarmg
+EnvironmentFile=/home/ubuntu/.env
+ExecStart=/home/ubuntu/almobarmg/backend/start.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
