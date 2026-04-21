@@ -20,7 +20,7 @@ from backend.models.enums import AppStatus, RiskLevel
 from backend.models.security_report import SecurityReport
 from backend.models.user import User
 from backend.services.storage_service import storage_service
-from backend.workers.celery_app import celery_app
+from backend.workers import celery_app
 
 logger = logging.getLogger(__name__)
 
@@ -218,114 +218,83 @@ async def _generate_ai_reports(findings: dict[str, Any]) -> tuple[str, list[dict
 async def _send_scan_email(email: str, app_name: str, score: int, summary: str) -> None:
     resend.api_key = settings.resend_api_key
     if score >= 20:
-        subject = f"Scan complete for {app_name}"
-        html = f"<p>Your app scan is complete. Score: {score}/100. Under review.</p>"
+        verdict = "completed"
+        subject = "Security scan completed"
     else:
-        subject = f"High-risk scan result for {app_name}"
-        html = f"<p>Your app was flagged as high-risk. Here's why: {summary}</p>"
+        verdict = "rejected"
+        subject = "Security scan found critical risks"
+
+    html = f"""
+    <h2>App Security Scan Result</h2>
+    <p><strong>App:</strong> {app_name}</p>
+    <p><strong>Verdict:</strong> {verdict}</p>
+    <p><strong>Security Score:</strong> {score}/100</p>
+    <p><strong>Summary:</strong> {summary}</p>
+    """
 
     await asyncio.to_thread(
         resend.Emails.send,
-        {"from": settings.email_from, "to": email, "subject": subject, "html": html},
+        {
+            "from": settings.email_from,
+            "to": email,
+            "subject": subject,
+            "html": html,
+        },
     )
 
 
-async def _set_app_pending_with_error(app_id: uuid.UUID, error_note: str) -> None:
-    async with AsyncSessionLocal() as db:
-        app = (await db.execute(select(App).where(App.id == app_id))).scalar_one_or_none()
-        if app is None:
-            return
-        app.status = AppStatus.pending
-        report = SecurityReport(
-            app_id=app.id,
-            score=0,
-            risk_level=RiskLevel.critical,
-            mobsf_raw={"error": error_note},
-            virustotal_raw={},
-            ai_summary=error_note,
-            ai_developer_report={"error": error_note},
-            ai_user_report={"error": error_note},
-            dangerous_permissions=[],
-            suspicious_apis=[],
-        )
-        db.add(report)
-        await db.commit()
+async def _scan(app_id: str) -> None:
+    temp_file: Path | None = None
 
-
-async def _scan_app_async(app_id: str) -> None:
-    temp_files: list[Path] = []
     try:
         app_uuid = uuid.UUID(app_id)
     except ValueError:
-        logger.error("Invalid app_id for scan: %s", app_id)
+        logger.error("Invalid app_id", extra={"app_id": app_id})
         return
 
-    try:
-        async with AsyncSessionLocal() as db:
-            app = (await db.execute(select(App).where(App.id == app_uuid))).scalar_one_or_none()
-            if app is None:
-                logger.error("App not found for scan: %s", app_id)
-                return
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(select(App).where(App.id == app_uuid))
+        app = result.scalar_one_or_none()
+        if app is None:
+            logger.error("App not found", extra={"app_id": app_id})
+            return
 
-            binary_urls = [
-                u
-                for u in [
-                    app.android_file_url,
-                    app.windows_file_url,
-                    app.mac_file_url,
-                    app.linux_deb_url,
-                    app.linux_appimage_url,
-                    app.linux_rpm_url,
-                ]
-                if u
-            ]
+        user_result = await db.execute(select(User).where(User.id == app.developer_id))
+        developer = user_result.scalar_one_or_none()
+        if developer is None:
+            logger.error("Developer not found", extra={"developer_id": str(app.developer_id)})
+            return
 
-            mobsf_reports: list[dict[str, Any]] = []
-            vt_reports: list[dict[str, Any]] = []
+        report_result = await db.execute(select(SecurityReport).where(SecurityReport.app_id == app.id))
+        report = report_result.scalar_one_or_none()
 
-            for idx, url in enumerate(binary_urls, start=1):
-                tmp_file = Path(tempfile.gettempdir()) / f"scan_{app.id}_{idx}"
-                temp_files.append(tmp_file)
-                await _download_to_temp(url, tmp_file)
+        if report is None:
+            report = SecurityReport(app_id=app.id)
+            db.add(report)
+            await db.flush()
 
-                try:
-                    mobsf_result: dict[str, Any] | None = None
-                    for attempt in range(3):
-                        try:
-                            mobsf_result = await _mobsf_scan(tmp_file)
-                            break
-                        except TimeoutError:
-                            logger.warning("MobSF timeout attempt %s for app %s", attempt + 1, app_id)
-                            if attempt == 2:
-                                await _set_app_pending_with_error(app.id, "MobSF timeout after retries")
-                                return
-                        except Exception:
-                            logger.exception("MobSF scan failed for app %s", app_id)
-                            if attempt == 2:
-                                await _set_app_pending_with_error(app.id, "MobSF scan failed repeatedly")
-                                return
+        app.status = AppStatus.reviewing
+        await db.commit()
 
-                    if mobsf_result:
-                        mobsf_reports.append(mobsf_result)
+        try:
+            if not app.android_file_url:
+                raise ValueError("Android file URL is missing")
 
-                    try:
-                        vt_reports.append(await _virustotal_scan(tmp_file))
-                    except Exception:
-                        logger.exception("VirusTotal failure for app %s", app_id)
-                        vt_reports.append({"error": "VirusTotal failed"})
-                except Exception:
-                    logger.exception("Binary scan pipeline failed for app %s", app_id)
-                    await _set_app_pending_with_error(app.id, "Binary scan pipeline failed")
-                    return
+            with tempfile.NamedTemporaryFile(prefix="scan_", suffix=".apk", delete=False) as fp:
+                temp_file = Path(fp.name)
 
-            dangerous_permissions, suspicious_apis, obfuscated, excess_network = _extract_findings(mobsf_reports)
+            await _download_to_temp(app.android_file_url, temp_file)
 
+            mobsf_report = await _mobsf_scan(temp_file)
+            vt_report = await _virustotal_scan(temp_file)
+
+            dangerous_permissions, suspicious_apis, obfuscated, excess_network = _extract_findings([mobsf_report])
             score = _calculate_score(
-                dangerous_permissions=dangerous_permissions,
-                suspicious_apis=suspicious_apis,
-                obfuscated=obfuscated,
-                excess_network=excess_network,
-                vt_reports=vt_reports,
+                dangerous_permissions,
+                suspicious_apis,
+                obfuscated,
+                excess_network,
+                [vt_report],
             )
             risk = _risk_level(score)
 
@@ -333,59 +302,45 @@ async def _scan_app_async(app_id: str) -> None:
                 "dangerous_permissions": dangerous_permissions,
                 "suspicious_apis": suspicious_apis,
                 "obfuscated_code": obfuscated,
-                "excess_network_connections": excess_network,
-                "mobsf_reports_count": len(mobsf_reports),
-                "vt_reports_count": len(vt_reports),
+                "excessive_network_calls": excess_network,
+                "mobsf_raw": mobsf_report,
+                "virustotal_result": vt_report,
             }
 
-            try:
-                ai_summary, ai_developer_report, ai_user_report = await _generate_ai_reports(findings)
-            except Exception:
-                logger.exception("AI report generation failed for app %s", app_id)
-                ai_summary = "Scan completed. Some high-risk behaviors were found. Review details before publishing."
-                ai_developer_report = [{"fix": "Run manual code review for dangerous permissions and suspicious API usage."}]
-                ai_user_report = {"data_access": dangerous_permissions, "note": "AI report unavailable"}
+            ai_summary, ai_dev, ai_user = await _generate_ai_reports(findings)
 
-            report = SecurityReport(
-                app_id=app.id,
-                score=score,
-                risk_level=risk,
-                mobsf_raw={"reports": mobsf_reports},
-                virustotal_raw={"reports": vt_reports},
-                ai_summary=ai_summary,
-                ai_developer_report=ai_developer_report,
-                ai_user_report=ai_user_report,
-                dangerous_permissions=dangerous_permissions,
-                suspicious_apis=suspicious_apis,
-            )
-            db.add(report)
+            report.security_score = score
+            report.risk_level = risk
+            report.dangerous_permissions = dangerous_permissions
+            report.suspicious_apis = suspicious_apis
+            report.obfuscated_code = obfuscated
+            report.excessive_network_calls = excess_network
+            report.virustotal_result = vt_report
+            report.ai_summary = ai_summary
+            report.ai_developer_report = ai_dev
+            report.ai_user_report = ai_user
 
-            app.security_score = score
-            app.status = AppStatus.review if score >= 20 else AppStatus.rejected
+            if score < 20:
+                app.status = AppStatus.rejected
+            else:
+                app.status = AppStatus.published
+
             await db.commit()
 
-            developer = (await db.execute(select(User).where(User.id == app.developer_id))).scalar_one_or_none()
-            if developer:
-                try:
-                    await _send_scan_email(developer.email, app.name, score, ai_summary)
-                except Exception:
-                    logger.exception("Failed to send scan email for app %s", app_id)
+            await _send_scan_email(developer.email, app.name, score, ai_summary)
 
-    except Exception:
-        logger.exception("Unexpected scan failure for app %s", app_id)
-        try:
-            await _set_app_pending_with_error(uuid.UUID(app_id), "Unexpected scan error")
-        except Exception:
-            logger.exception("Failed to set pending status after scan failure for app %s", app_id)
-    finally:
-        for temp_file in temp_files:
-            try:
-                if temp_file.exists():
-                    temp_file.unlink()
-            except OSError:
-                logger.warning("Failed to cleanup temp file: %s", temp_file)
+        except Exception as exc:
+            logger.exception("Security scan failed", extra={"app_id": app_id})
+            report.ai_summary = f"Scan failed: {exc}"
+            report.risk_level = RiskLevel.critical
+            report.security_score = 0
+            app.status = AppStatus.rejected
+            await db.commit()
+
+    if temp_file and temp_file.exists():
+        temp_file.unlink(missing_ok=True)
 
 
 @celery_app.task(name="scan_app")
 def scan_app(app_id: str) -> None:
-    asyncio.run(_scan_app_async(app_id))
+    asyncio.run(_scan(app_id))

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging.config
 from contextlib import asynccontextmanager
 
 import httpx
@@ -9,14 +10,29 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from backend.config import settings
 from backend.database import engine
+from backend.logging_config import get_logging_config
+from backend.middleware.rate_limit import RateLimitMiddleware
 from backend.routers.admin import router as admin_router
 from backend.routers.apps import router as apps_router
 from backend.routers.auth import router as auth_router
 from backend.routers.payments import router as payments_router
 from backend.services.auth_service import redis_client
+
+logging.config.dictConfig(get_logging_config())
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        return response
 
 
 @asynccontextmanager
@@ -33,6 +49,12 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(title="Al Mobarmg Store API", version="0.1.0", lifespan=lifespan)
 
+app.add_middleware(
+    TrustedHostMiddleware,
+    allowed_hosts=["54.195.111.168", "localhost", "127.0.0.1"],
+)
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(RateLimitMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[settings.frontend_url],
