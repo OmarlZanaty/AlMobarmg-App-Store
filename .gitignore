@@ -1,0 +1,19 @@
+# system
+.ssh/
+.cache/
+.local/
+.vscode-server/
+
+# python
+venv/
+__pycache__/
+*.pyc
+
+# tools
+mobsf_data/
+
+# env
+.env
+
+# logs
+*.log
