@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+PROJECT_DIR="/home/ubuntu/almobarmg"
+VENV_PATH="/home/ubuntu/venv/bin/activate"
+SYSTEMD_DIR="/etc/systemd/system"
+NGINX_AVAILABLE="/etc/nginx/sites-available/almobarmg"
+NGINX_ENABLED="/etc/nginx/sites-enabled/almobarmg"
+
+echo "Creating web root..."
+sudo mkdir -p /var/www/almobarmg
+sudo chown -R ubuntu:ubuntu /var/www/almobarmg
+sudo chmod -R 755 /var/www/almobarmg
+
+cd "$PROJECT_DIR"
+source "$VENV_PATH"
+
+echo "Running database migrations..."
+python -m backend.migrations.run
+
+echo "Installing systemd services..."
+sudo cp "$PROJECT_DIR/etc/systemd/system/almobarmg-api.service" "$SYSTEMD_DIR/almobarmg-api.service"
+sudo cp "$PROJECT_DIR/etc/systemd/system/almobarmg-worker.service" "$SYSTEMD_DIR/almobarmg-worker.service"
+
+echo "Installing Nginx site..."
+sudo cp "$PROJECT_DIR/etc/nginx/sites-available/almobarmg" "$NGINX_AVAILABLE"
+if [ -L "$NGINX_ENABLED" ] || [ -f "$NGINX_ENABLED" ]; then
+  sudo rm -f "$NGINX_ENABLED"
+fi
+sudo ln -s "$NGINX_AVAILABLE" "$NGINX_ENABLED"
+if [ -L /etc/nginx/sites-enabled/default ] || [ -f /etc/nginx/sites-enabled/default ]; then
+  sudo rm -f /etc/nginx/sites-enabled/default
+fi
+sudo nginx -t
+sudo systemctl reload nginx
+
+echo "Reloading systemd and enabling services..."
+sudo systemctl daemon-reload
+sudo systemctl enable --now almobarmg-api.service
+sudo systemctl enable --now almobarmg-worker.service
+
+echo "Verifying services..."
+sudo systemctl --no-pager --full status almobarmg-api.service
+sudo systemctl --no-pager --full status almobarmg-worker.service
+sudo systemctl --no-pager --full status nginx.service
+
+echo "Health check (/health)..."
+curl -fsS http://127.0.0.1:8080/health
+
+echo "Initial setup completed successfully."
