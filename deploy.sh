@@ -4,6 +4,7 @@ set -euo pipefail
 PROJECT_DIR="/home/ubuntu/almobarmg"
 VENV_PATH="/home/ubuntu/venv/bin/activate"
 WEB_ROOT="/var/www/almobarmg"
+SYSTEMD_DIR="/etc/systemd/system"
 
 cd "$PROJECT_DIR"
 
@@ -18,7 +19,7 @@ pip install --upgrade pip
 pip install -r requirements.txt
 
 echo "[4/11] Running database migrations..."
-alembic upgrade head
+python -m backend.migrations.run
 
 echo "[5/11] Building Flutter web release..."
 cd frontend
@@ -32,6 +33,12 @@ sudo rsync -a --delete build/web/ "$WEB_ROOT"/
 cd "$PROJECT_DIR"
 
 echo "[7/11] Restarting API service..."
+if ! systemctl list-unit-files | grep -q '^almobarmg-api.service'; then
+  echo "Installing missing systemd unit files..."
+  sudo cp "$PROJECT_DIR/etc/systemd/system/almobarmg-api.service" "$SYSTEMD_DIR/almobarmg-api.service"
+  sudo cp "$PROJECT_DIR/etc/systemd/system/almobarmg-worker.service" "$SYSTEMD_DIR/almobarmg-worker.service"
+  sudo systemctl daemon-reload
+fi
 sudo systemctl restart almobarmg-api
 
 echo "[8/11] Restarting worker service..."
@@ -50,6 +57,6 @@ echo "[11/11] Deployment status summary"
 echo "API:     $(systemctl is-active almobarmg-api)"
 echo "Worker:  $(systemctl is-active almobarmg-worker)"
 echo "Nginx:   $(systemctl is-active nginx)"
-echo "Health:  $(curl -fsS http://127.0.0.1/api/health || echo 'unavailable')"
+echo "Health:  $(curl -fsS http://127.0.0.1:8080/health || echo 'unavailable')"
 
 echo "Deployment completed successfully."

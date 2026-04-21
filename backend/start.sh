@@ -4,7 +4,7 @@ set -euo pipefail
 cd /home/ubuntu/almobarmg
 source /home/ubuntu/venv/bin/activate
 
-alembic upgrade head
+python -m backend.migrations.run
 
 exec gunicorn backend.main:app \
   -w 4 \
