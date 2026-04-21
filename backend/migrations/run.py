@@ -18,7 +18,13 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 
 
 async def run_migrations() -> None:
-    connection = await asyncpg.connect(settings.database_url)
+    database_url = settings.database_url
+    if database_url.startswith("postgresql+asyncpg://"):
+        database_url = database_url.replace("postgresql+asyncpg://", "postgresql://", 1)
+    elif database_url.startswith("postgres+asyncpg://"):
+        database_url = database_url.replace("postgres+asyncpg://", "postgres://", 1)
+
+    connection = await asyncpg.connect(database_url)
     try:
         await connection.execute(CREATE_MIGRATIONS_TABLE_SQL)
 
