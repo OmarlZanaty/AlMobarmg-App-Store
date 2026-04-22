@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
@@ -29,6 +30,7 @@ from backend.services.auth_service import (
 from backend.services.auth_service import redis_client
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+logger = logging.getLogger(__name__)
 
 
 class RegisterRequest(BaseModel):
@@ -118,7 +120,14 @@ async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db))
     await db.refresh(new_user)
 
     otp = await generate_otp(email)
-    await send_verification_email(email=email, otp=otp, name=payload.name.strip())
+    try:
+        await send_verification_email(email=email, otp=otp, name=payload.name.strip())
+    except Exception:
+        logger.exception("Failed to send verification email during registration", extra={"email": email})
+        return RegisterResponse(
+            message="Account created. Verification email delivery failed; please try resend verification.",
+            user_id=str(new_user.id),
+        )
 
     return RegisterResponse(message="Verification email sent", user_id=str(new_user.id))
 
@@ -220,7 +229,14 @@ async def resend_verification(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     otp = await generate_otp(email)
-    await send_verification_email(email=email, otp=otp, name=user.name)
+    try:
+        await send_verification_email(email=email, otp=otp, name=user.name)
+    except Exception as exc:
+        logger.exception("Failed to resend verification email", extra={"email": email})
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Unable to send verification email right now. Please try again shortly.",
+        ) from exc
     return MessageResponse(message="Verification email sent")
 
 
@@ -235,7 +251,10 @@ async def forgot_password(
 
     if user:
         token = await generate_reset_token(email)
-        await send_password_reset_email(email=email, token=token)
+        try:
+            await send_password_reset_email(email=email, token=token)
+        except Exception:
+            logger.exception("Failed to send password reset email", extra={"email": email})
 
     return MessageResponse(message="Reset email sent")
 
