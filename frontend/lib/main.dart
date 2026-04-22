@@ -7,7 +7,11 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 
 import 'screens/app_detail_screen.dart';
+import 'screens/auth/login_screen.dart';
+import 'screens/auth/register_screen.dart';
+import 'screens/auth/verify_email_screen.dart';
 import 'screens/developer/upload_screen.dart';
+import 'screens/fix_rejection_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/install_guide_screen.dart';
 import 'screens/security_report_screen.dart';
@@ -17,7 +21,8 @@ void main() {
   runApp(const ProviderScope(child: AlMobarmgStoreApp()));
 }
 
-final secureStorageProvider = Provider<FlutterSecureStorage>((_) => const FlutterSecureStorage());
+final secureStorageProvider =
+    Provider<FlutterSecureStorage>((_) => const FlutterSecureStorage());
 
 final authStateProvider = StateNotifierProvider<AuthStateNotifier, AuthState>(
   (ref) => AuthStateNotifier(ref.read(secureStorageProvider)),
@@ -65,25 +70,45 @@ final goRouterProvider = Provider<GoRouter>((ref) {
     initialLocation: '/',
     routes: [
       GoRoute(path: '/', builder: (context, state) => const SplashGate()),
-      GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
-      GoRoute(path: '/register', builder: (context, state) => const RegisterScreen()),
+      GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
+      GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
+      GoRoute(
+        path: '/verify-email',
+        builder: (context, state) =>
+            VerifyEmailScreen(email: state.uri.queryParameters['email'] ?? ''),
+      ),
       GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
       GoRoute(
         path: '/apps/:id',
-        builder: (context, state) => AppDetailScreen(appId: state.pathParameters['id'] ?? ''),
+        builder: (context, state) =>
+            AppDetailScreen(appId: state.pathParameters['id'] ?? ''),
       ),
       GoRoute(
         path: '/apps/:id/security-report',
-        builder: (context, state) => SecurityReportScreen(appId: state.pathParameters['id'] ?? ''),
+        builder: (context, state) =>
+            SecurityReportScreen(appId: state.pathParameters['id'] ?? ''),
       ),
-      GoRoute(path: '/install-guide', builder: (context, state) => const InstallGuideScreen()),
-      GoRoute(path: '/developer/dashboard', builder: (context, state) => const DeveloperDashboardScreen()),
-      GoRoute(path: '/developer/upload', builder: (context, state) => const DeveloperUploadScreen()),
+      GoRoute(
+        path: '/install-guide',
+        builder: (context, state) => const InstallGuideScreen(),
+      ),
+      GoRoute(
+        path: '/developer/dashboard',
+        builder: (context, state) => const DeveloperDashboardScreen(),
+      ),
+      GoRoute(
+        path: '/developer/upload',
+        builder: (context, state) => const DeveloperUploadScreen(),
+      ),
       GoRoute(path: '/admin/queue', builder: (context, state) => const AdminQueueScreen()),
+      GoRoute(path: '/fix-rejection', builder: (_, __) => const FixRejectionScreen()),
     ],
     redirect: (context, state) {
       if (auth.loading) return null;
-      final onAuthPage = state.matchedLocation == '/login' || state.matchedLocation == '/register';
+      final onAuthPage =
+          state.matchedLocation == '/login' ||
+          state.matchedLocation == '/register' ||
+          state.matchedLocation == '/verify-email';
       if (!auth.isAuthenticated && !onAuthPage && state.matchedLocation != '/') {
         return '/login';
       }
@@ -125,7 +150,8 @@ class AlMobarmgStoreApp extends ConsumerWidget {
       builder: (context, child) {
         final locale = Localizations.localeOf(context);
         return Directionality(
-          textDirection: locale.languageCode == 'ar' ? TextDirection.rtl : TextDirection.ltr,
+          textDirection:
+              locale.languageCode == 'ar' ? TextDirection.rtl : TextDirection.ltr,
           child: child ?? const SizedBox.shrink(),
         );
       },
@@ -157,40 +183,8 @@ class SplashGate extends ConsumerWidget {
       }
     });
 
-    return const Scaffold(body: Center(child: Text('Launching Al Mobarmg Store...')));
-  }
-}
-
-class LoginScreen extends StatelessWidget {
-  const LoginScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Login')),
-      body: Center(
-        child: ElevatedButton(
-          onPressed: () => context.go('/register'),
-          child: const Text('Go to Register'),
-        ),
-      ),
-    );
-  }
-}
-
-class RegisterScreen extends StatelessWidget {
-  const RegisterScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Register')),
-      body: Center(
-        child: ElevatedButton(
-          onPressed: () => context.go('/login'),
-          child: const Text('Back to Login'),
-        ),
-      ),
+    return const Scaffold(
+      body: Center(child: Text('Launching Al Mobarmg Store...')),
     );
   }
 }
