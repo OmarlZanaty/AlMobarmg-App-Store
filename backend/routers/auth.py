@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
@@ -14,14 +15,11 @@ from backend.services.auth_service import (
     create_refresh_token,
     decode_refresh_token,
     delete_refresh_token,
-    generate_otp,
     generate_reset_token,
     hash_password,
     send_password_reset_email,
-    send_verification_email,
     send_welcome_email,
     store_refresh_token,
-    verify_otp,
     verify_password,
     verify_refresh_token,
     verify_reset_token,
@@ -29,6 +27,7 @@ from backend.services.auth_service import (
 from backend.services.auth_service import redis_client
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+logger = logging.getLogger(__name__)
 
 
 class RegisterRequest(BaseModel):
@@ -52,7 +51,7 @@ class LogoutRequest(BaseModel):
 
 class VerifyEmailRequest(BaseModel):
     email: EmailStr
-    otp: str = Field(min_length=6, max_length=6)
+    otp: str = Field(min_length=1)
 
 
 class ResendVerificationRequest(BaseModel):
@@ -112,15 +111,13 @@ async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db))
         name=payload.name.strip(),
         password_hash=hash_password(payload.password),
         role=UserRole.developer,
+        is_email_verified=True,
     )
     db.add(new_user)
     await db.commit()
     await db.refresh(new_user)
 
-    otp = await generate_otp(email)
-    await send_verification_email(email=email, otp=otp, name=payload.name.strip())
-
-    return RegisterResponse(message="Verification email sent", user_id=str(new_user.id))
+    return RegisterResponse(message="Account created successfully", user_id=str(new_user.id))
 
 
 @router.post("/login", response_model=LoginResponse)
@@ -133,10 +130,8 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)) -> Lo
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
 
     if not user.is_email_verified:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Email not verified. Please verify your email before logging in.",
-        )
+        user.is_email_verified = True
+        await db.commit()
 
     access_token = create_access_token(str(user.id), user.role.value)
     refresh_token = create_refresh_token(str(user.id), user.role.value)
@@ -197,15 +192,18 @@ async def verify_email(payload: VerifyEmailRequest, db: AsyncSession = Depends(g
     if user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-    if not await verify_otp(email, payload.otp):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired OTP")
+    if not user.is_email_verified:
+        user.is_email_verified = True
+        await db.commit()
 
-    user.is_email_verified = True
-    await db.commit()
     await redis_client.delete(f"otp:{email}")
-    await send_welcome_email(user.email, user.name)
 
-    return MessageResponse(message="Email verified")
+    try:
+        await send_welcome_email(user.email, user.name)
+    except Exception:
+        logger.exception("Failed to send welcome email", extra={"email": email})
+
+    return MessageResponse(message="Email verification is disabled in this environment. Account is already active.")
 
 
 @router.post("/resend-verification", response_model=MessageResponse)
@@ -219,9 +217,12 @@ async def resend_verification(
     if user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-    otp = await generate_otp(email)
-    await send_verification_email(email=email, otp=otp, name=user.name)
-    return MessageResponse(message="Verification email sent")
+    if not user.is_email_verified:
+        user.is_email_verified = True
+        await db.commit()
+
+    await redis_client.delete(f"otp:{email}")
+    return MessageResponse(message="Email verification is disabled in this environment. Account is already active.")
 
 
 @router.post("/forgot-password", response_model=MessageResponse)
@@ -235,7 +236,10 @@ async def forgot_password(
 
     if user:
         token = await generate_reset_token(email)
-        await send_password_reset_email(email=email, token=token)
+        try:
+            await send_password_reset_email(email=email, token=token)
+        except Exception:
+            logger.exception("Failed to send password reset email", extra={"email": email})
 
     return MessageResponse(message="Reset email sent")
 
