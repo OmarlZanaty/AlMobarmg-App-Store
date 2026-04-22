@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class InstallService {
@@ -18,21 +19,24 @@ class InstallService {
     try {
       switch (platform.toLowerCase()) {
         case 'android':
-          await _installAndroid(app['android_download_url'] ?? app['android_signed_url']);
+          await _installAndroid(
+            context,
+            app['android_download_url']?.toString() ?? app['android_signed_url']?.toString(),
+          );
           return;
         case 'iphone':
         case 'ios':
-          await _openIosPwa(context, app['pwa_url'] ?? app['ios_pwa_url']);
+          await _openIosPwa(context, app['pwa_url']?.toString() ?? app['ios_pwa_url']?.toString());
           return;
         case 'windows':
-          await _openDesktopInstaller(app['windows_download_url'], 'Windows');
+          await _openDesktopInstaller(app['windows_download_url']?.toString(), 'Windows');
           return;
         case 'mac':
         case 'macos':
-          await _openDesktopInstaller(app['mac_download_url'], 'Mac');
+          await _openDesktopInstaller(app['mac_download_url']?.toString(), 'Mac');
           return;
         case 'linux':
-          await _openDesktopInstaller(app['linux_download_url'], 'Linux');
+          await _openDesktopInstaller(app['linux_download_url']?.toString(), 'Linux');
           return;
         default:
           throw Exception('Unsupported platform: $platform');
@@ -81,11 +85,41 @@ class InstallService {
     }
   }
 
-  Future<void> _installAndroid(String? url) async {
+  Future<void> _installAndroid(BuildContext context, String? url) async {
     if (url == null || url.isEmpty) throw Exception('Missing Android signed URL');
 
-    final tempPath = '/tmp/al_mobarmg_temp.apk';
-    await _dio.download(url, tempPath);
+    final dir = await getTemporaryDirectory();
+    final tempPath = '${dir.path}/al_mobarmg_${DateTime.now().millisecondsSinceEpoch}.apk';
+
+    final progressNotifier = ValueNotifier<double>(0);
+    final messenger = ScaffoldMessenger.of(context);
+
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        duration: const Duration(days: 1),
+        content: ValueListenableBuilder<double>(
+          valueListenable: progressNotifier,
+          builder: (context, progress, _) {
+            final percent = (progress * 100).clamp(0, 100).toStringAsFixed(0);
+            return Text('Downloading APK... $percent%');
+          },
+        ),
+      ),
+    );
+
+    await _dio.download(
+      url,
+      tempPath,
+      onReceiveProgress: (received, total) {
+        if (total > 0) {
+          progressNotifier.value = received / total;
+        }
+      },
+    );
+
+    messenger.hideCurrentSnackBar();
+    progressNotifier.dispose();
 
     final apkUri = Uri.file(tempPath);
     final launched = await launchUrl(apkUri, mode: LaunchMode.externalApplication);
