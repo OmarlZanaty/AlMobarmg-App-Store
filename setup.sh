@@ -8,6 +8,10 @@ SYSTEMD_DIR="/etc/systemd/system"
 NGINX_AVAILABLE="/etc/nginx/sites-available/almobarmg"
 NGINX_ENABLED="/etc/nginx/sites-enabled/almobarmg"
 LEGACY_PATH="/home/ubuntu/almobarmg"
+LOG_DIR="/var/log/almobarmg"
+DISK_MONITOR_SCRIPT="/usr/local/bin/almobarmg-disk-monitor.sh"
+CRON_FILE="/etc/cron.d/almobarmg-disk-monitor"
+LOGROTATE_FILE="/etc/logrotate.d/almobarmg"
 
 if [ ! -d "$PROJECT_DIR/backend" ] || [ ! -f "$PROJECT_DIR/backend/main.py" ]; then
   echo "Error: PROJECT_DIR '$PROJECT_DIR' does not look like the app repository root."
@@ -61,6 +65,69 @@ echo "Reloading systemd and enabling services..."
 sudo systemctl daemon-reload
 sudo systemctl enable --now almobarmg-api.service
 sudo systemctl enable --now almobarmg-worker.service
+
+echo "Configuring application logs directory..."
+sudo mkdir -p "$LOG_DIR"
+sudo chown ubuntu:ubuntu "$LOG_DIR"
+sudo chmod 750 "$LOG_DIR"
+
+echo "Installing disk usage monitoring cron job..."
+sudo tee "$DISK_MONITOR_SCRIPT" >/dev/null <<'BASH'
+#!/usr/bin/env bash
+set -euo pipefail
+
+ENV_FILE="/home/ubuntu/.env"
+TARGET_PATH="/home/ubuntu"
+THRESHOLD=85
+
+if [ -f "$ENV_FILE" ]; then
+  set -a
+  # shellcheck disable=SC1090
+  source "$ENV_FILE"
+  set +a
+fi
+
+usage_pct=$(df -P "$TARGET_PATH" | awk 'NR==2 {gsub("%", "", $5); print $5}')
+if [ -z "$usage_pct" ]; then
+  exit 0
+fi
+
+if [ "$usage_pct" -gt "$THRESHOLD" ] && [ -n "${RESEND_API_KEY:-}" ] && [ -n "${EMAIL_FROM:-}" ]; then
+  to_email="${ALERT_EMAIL_TO:-$EMAIL_FROM}"
+  subject="[Al Mobarmg] Disk usage alert: ${usage_pct}%"
+  body="Disk usage on $(hostname) at ${TARGET_PATH} is ${usage_pct}% (threshold: ${THRESHOLD}%)."
+
+  curl -sS https://api.resend.com/emails \
+    -H "Authorization: Bearer ${RESEND_API_KEY}" \
+    -H "Content-Type: application/json" \
+    -d "{\"from\":\"${EMAIL_FROM}\",\"to\":[\"${to_email}\"],\"subject\":\"${subject}\",\"text\":\"${body}\"}" \
+    >/dev/null
+fi
+BASH
+sudo chmod 750 "$DISK_MONITOR_SCRIPT"
+
+sudo tee "$CRON_FILE" >/dev/null <<CRON
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+0 * * * * ubuntu $DISK_MONITOR_SCRIPT >> $LOG_DIR/disk-monitor.log 2>&1
+CRON
+sudo chmod 644 "$CRON_FILE"
+
+echo "Installing logrotate configuration for ${LOG_DIR}..."
+sudo tee "$LOGROTATE_FILE" >/dev/null <<'ROTATE'
+/var/log/almobarmg/*.log {
+  daily
+  rotate 14
+  compress
+  delaycompress
+  missingok
+  notifempty
+  copytruncate
+  create 0640 ubuntu ubuntu
+}
+ROTATE
+
+sudo logrotate -f "$LOGROTATE_FILE"
 
 echo "Running database migrations..."
 python -m backend.migrations.run
