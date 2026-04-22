@@ -10,6 +10,8 @@ import 'screens/app_detail_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'screens/auth/verify_email_screen.dart';
+import 'screens/admin/queue_screen.dart';
+import 'screens/developer/dashboard_screen.dart';
 import 'screens/developer/upload_screen.dart';
 import 'screens/fix_rejection_screen.dart';
 import 'screens/home_screen.dart';
@@ -185,34 +187,6 @@ class SplashGate extends ConsumerWidget {
 
     return const Scaffold(
       body: Center(child: Text('Launching Al Mobarmg Store...')),
-    );
-  }
-}
-
-class DeveloperDashboardScreen extends StatelessWidget {
-  const DeveloperDashboardScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Developer Dashboard')),
-      body: Center(
-        child: ElevatedButton(
-          onPressed: () => context.go('/developer/upload'),
-          child: const Text('Upload New App'),
-        ),
-      ),
-    );
-  }
-}
-
-class AdminQueueScreen extends StatelessWidget {
-  const AdminQueueScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: Text('Admin moderation queue coming from backend endpoint.')),
     );
   }
 }

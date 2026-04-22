@@ -250,6 +250,55 @@ class ApiService {
     }
   }
 
+  Future<List<Map<String, dynamic>>> getDeveloperApps() async {
+    try {
+      final response = await _dio.get('/developer/apps');
+      final data = response.data;
+      if (data is List) {
+        return data.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      }
+      final payload = Map<String, dynamic>.from(data as Map);
+      final items = (payload['items'] as List? ?? const []);
+      return items.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    } catch (error) {
+      _throwReadableError(error);
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getAdminQueue({int page = 1, int pageSize = 20}) async {
+    try {
+      final response = await _dio.get(
+        '/admin/queue',
+        queryParameters: {'page': page, 'page_size': pageSize},
+      );
+      final data = response.data;
+      if (data is List) {
+        return data.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      }
+      final payload = Map<String, dynamic>.from(data as Map);
+      final items = (payload['items'] as List? ?? const []);
+      return items.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    } catch (error) {
+      _throwReadableError(error);
+    }
+  }
+
+  Future<void> approveApp(String appId) async {
+    try {
+      await _dio.post('/admin/apps/$appId/approve');
+    } catch (error) {
+      _throwReadableError(error);
+    }
+  }
+
+  Future<void> rejectApp(String appId, {required String reason}) async {
+    try {
+      await _dio.post('/admin/apps/$appId/reject', data: {'reason': reason});
+    } catch (error) {
+      _throwReadableError(error);
+    }
+  }
+
   Future<Map<String, dynamic>> createFixRejectionPayment(
     String rejectionReason, {
     File? androidFile,
@@ -272,44 +321,4 @@ class ApiService {
     }
   }
 
-  Future<List<Map<String, dynamic>>> getDeveloperApps() async {
-    try {
-      final response = await _dio.get('/developer/apps');
-      final data = response.data;
-      if (data is List) {
-        return data.map((e) => Map<String, dynamic>.from(e as Map)).toList();
-      }
-      final items = (Map<String, dynamic>.from(data as Map)['items'] as List? ?? const []);
-      return items.map((e) => Map<String, dynamic>.from(e as Map)).toList();
-    } catch (error) {
-      _throwReadableError(error);
-    }
-  }
-
-  Future<List<Map<String, dynamic>>> getAdminQueue() async {
-    try {
-      final response = await _dio.get('/admin/queue');
-      final data = Map<String, dynamic>.from(response.data as Map);
-      final items = (data['items'] as List? ?? const []);
-      return items.map((e) => Map<String, dynamic>.from(e as Map)).toList();
-    } catch (error) {
-      _throwReadableError(error);
-    }
-  }
-
-  Future<void> approveApp(String id) async {
-    try {
-      await _dio.post('/admin/apps/$id/approve');
-    } catch (error) {
-      _throwReadableError(error);
-    }
-  }
-
-  Future<void> rejectApp(String id, String reason) async {
-    try {
-      await _dio.post('/admin/apps/$id/reject', data: {'reason': reason});
-    } catch (error) {
-      _throwReadableError(error);
-    }
-  }
 }

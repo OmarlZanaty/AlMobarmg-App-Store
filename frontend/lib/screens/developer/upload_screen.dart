@@ -3,13 +3,9 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fluttertoast/fluttertoast.dart';
-import 'package:percent_indicator/linear_percent_indicator.dart';
+import 'package:go_router/go_router.dart';
 
-import '../../services/api_service.dart';
-import '../home_screen.dart';
-
-final uploadStateProvider = StateProvider<double>((_) => 0);
+import '../../providers.dart';
 
 class DeveloperUploadScreen extends ConsumerStatefulWidget {
   const DeveloperUploadScreen({super.key});
@@ -20,7 +16,6 @@ class DeveloperUploadScreen extends ConsumerStatefulWidget {
 
 class _DeveloperUploadScreenState extends ConsumerState<DeveloperUploadScreen> {
   final _formKey = GlobalKey<FormState>();
-  int _step = 0;
 
   final _name = TextEditingController();
   final _version = TextEditingController(text: '1.0.0');
@@ -35,7 +30,9 @@ class _DeveloperUploadScreenState extends ConsumerState<DeveloperUploadScreen> {
   List<File> _linuxFiles = [];
   File? _iconFile;
   List<File> _screenshots = [];
+
   bool _submitting = false;
+  double _progress = 0;
 
   @override
   void dispose() {
@@ -50,148 +47,228 @@ class _DeveloperUploadScreenState extends ConsumerState<DeveloperUploadScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final progress = ref.watch(uploadStateProvider);
-
     return Scaffold(
       appBar: AppBar(title: const Text('Upload App')),
-      body: Form(
-        key: _formKey,
-        child: Stepper(
-          currentStep: _step,
-          onStepContinue: _onContinue,
-          onStepCancel: _step == 0 ? null : () => setState(() => _step--),
-          controlsBuilder: (context, details) {
-            return Row(
-              children: [
-                ElevatedButton(onPressed: details.onStepContinue, child: Text(_step == 3 ? 'Submit' : 'Next')),
-                const SizedBox(width: 8),
-                TextButton(onPressed: details.onStepCancel, child: const Text('Back')),
-              ],
-            );
-          },
-          steps: [
-            Step(
-              isActive: _step == 0,
-              title: const Text('Basic Info'),
-              content: Column(children: [
-                TextFormField(controller: _name, decoration: const InputDecoration(labelText: 'App name'), validator: _required),
-                TextFormField(controller: _version, decoration: const InputDecoration(labelText: 'Version'), validator: _required),
-                TextFormField(
-                  controller: _shortDescription,
-                  decoration: const InputDecoration(labelText: 'Short description'),
-                  validator: _required,
+      body: SafeArea(
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
+            children: [
+              Text('Basic information', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 10),
+              TextFormField(
+                controller: _name,
+                decoration: const InputDecoration(
+                  labelText: 'App name',
+                  border: OutlineInputBorder(),
                 ),
-                TextFormField(controller: _category, decoration: const InputDecoration(labelText: 'Category'), validator: _required),
-                TextFormField(
-                  controller: _description,
-                  maxLines: 4,
-                  decoration: const InputDecoration(labelText: 'Full description'),
-                  validator: _required,
+                validator: _required,
+              ),
+              const SizedBox(height: 10),
+              TextFormField(
+                controller: _version,
+                decoration: const InputDecoration(
+                  labelText: 'Version',
+                  hintText: 'x.y.z (example: 1.2.0)',
+                  border: OutlineInputBorder(),
                 ),
-              ]),
-            ),
-            Step(
-              isActive: _step == 1,
-              title: const Text('Platform files'),
-              content: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                _fileTile('Android (.apk/.aab)', _androidFile, () => _pickSingle(['apk', 'aab'], (f) => _androidFile = f)),
-                TextFormField(
-                  controller: _iosPwaUrl,
-                  decoration: const InputDecoration(labelText: 'iOS PWA URL (https://...)'),
+                validator: _validateVersion,
+              ),
+              const SizedBox(height: 10),
+              TextFormField(
+                controller: _shortDescription,
+                decoration: const InputDecoration(
+                  labelText: 'Short description',
+                  border: OutlineInputBorder(),
                 ),
-                _fileTile('Windows (.exe/.msix)', _windowsFile, () => _pickSingle(['exe', 'msix'], (f) => _windowsFile = f)),
-                _fileTile('Mac (.dmg)', _macFile, () => _pickSingle(['dmg'], (f) => _macFile = f)),
-                ListTile(
-                  title: Text('Linux files selected: ${_linuxFiles.length}'),
-                  subtitle: const Text('.deb / .appimage / .rpm (multiple)'),
-                  trailing: IconButton(icon: const Icon(Icons.upload_file), onPressed: _pickLinux),
+                validator: _required,
+              ),
+              const SizedBox(height: 10),
+              TextFormField(
+                controller: _category,
+                decoration: const InputDecoration(
+                  labelText: 'Category',
+                  border: OutlineInputBorder(),
                 ),
+                validator: _required,
+              ),
+              const SizedBox(height: 10),
+              TextFormField(
+                controller: _description,
+                maxLines: 4,
+                decoration: const InputDecoration(
+                  labelText: 'Full description',
+                  border: OutlineInputBorder(),
+                ),
+                validator: _required,
+              ),
+              const SizedBox(height: 16),
+              Text('Platform files', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 8),
+              _platformTile(
+                title: 'Android (.apk/.aab)',
+                optional: true,
+                file: _androidFile,
+                onPick: () async {
+                  _androidFile = await _pickSingle(['apk', 'aab']);
+                  setState(() {});
+                },
+              ),
+              TextFormField(
+                controller: _iosPwaUrl,
+                decoration: const InputDecoration(
+                  labelText: 'iOS PWA URL',
+                  helperText:
+                      'A PWA URL is a web app link (HTTPS) that iOS users open in Safari and add to Home Screen.',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  final text = value?.trim() ?? '';
+                  if (text.isEmpty) return null;
+                  final uri = Uri.tryParse(text);
+                  if (uri == null || !uri.hasScheme || uri.scheme != 'https') {
+                    return 'Enter a valid HTTPS URL';
+                  }
+                  return null;
+                },
+              ),
+              _platformTile(
+                title: 'Windows (.exe/.msix)',
+                optional: true,
+                file: _windowsFile,
+                onPick: () async {
+                  _windowsFile = await _pickSingle(['exe', 'msix']);
+                  setState(() {});
+                },
+              ),
+              _platformTile(
+                title: 'Mac (.dmg)',
+                optional: true,
+                file: _macFile,
+                onPick: () async {
+                  _macFile = await _pickSingle(['dmg']);
+                  setState(() {});
+                },
+              ),
+              Card(
+                child: ListTile(
+                  title: const Text('Linux packages'),
+                  subtitle: Text('Selected: ${_linuxFiles.length} file(s) • Optional'),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.upload_file),
+                    onPressed: _pickLinux,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'At least one platform is required before submission.',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 16),
+              Text('Visual assets', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 8),
+              _platformTile(
+                title: 'App icon',
+                optional: false,
+                file: _iconFile,
+                onPick: () async {
+                  _iconFile = await _pickSingle(['png', 'jpg', 'jpeg', 'webp']);
+                  setState(() {});
+                },
+              ),
+              Card(
+                child: ListTile(
+                  title: const Text('Screenshots'),
+                  subtitle: Text('Selected: ${_screenshots.length} file(s) • Required: 2 to 8'),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.photo_library),
+                    onPressed: _pickScreenshots,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              if (_submitting) ...[
+                LinearProgressIndicator(value: _progress == 0 ? null : _progress),
                 const SizedBox(height: 8),
-                const Text('At least one platform is required.'),
-              ]),
-            ),
-            Step(
-              isActive: _step == 2,
-              title: const Text('Visual Assets'),
-              content: Column(
-                children: [
-                  _fileTile('App icon', _iconFile, () => _pickSingle(['png', 'jpg', 'jpeg', 'webp'], (f) => _iconFile = f)),
-                  ListTile(
-                    title: Text('Screenshots selected: ${_screenshots.length}'),
-                    subtitle: const Text('2 to 8 images required'),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.photo_library),
-                      onPressed: _pickScreenshots,
-                    ),
-                  ),
-                ],
+                Text('Uploading ${(100 * _progress).toStringAsFixed(0)}%'),
+                const SizedBox(height: 8),
+              ],
+              FilledButton.icon(
+                onPressed: _submitting ? null : _submit,
+                icon: const Icon(Icons.cloud_upload),
+                label: Text(_submitting ? 'Submitting...' : 'Submit App'),
               ),
-            ),
-            Step(
-              isActive: _step == 3,
-              title: const Text('Review & Submit'),
-              content: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Name: ${_name.text}'),
-                  Text('Category: ${_category.text}'),
-                  Text('Version: ${_version.text}'),
-                  Text('Android: ${_androidFile?.path.split('/').last ?? 'Not provided'}'),
-                  Text('iOS PWA: ${_iosPwaUrl.text.isEmpty ? 'Not provided' : _iosPwaUrl.text}'),
-                  Text('Windows: ${_windowsFile?.path.split('/').last ?? 'Not provided'}'),
-                  Text('Mac: ${_macFile?.path.split('/').last ?? 'Not provided'}'),
-                  Text('Linux files: ${_linuxFiles.length}'),
-                  Text('Screenshots: ${_screenshots.length}'),
-                  const SizedBox(height: 12),
-                  LinearPercentIndicator(
-                    lineHeight: 16,
-                    percent: progress.clamp(0, 1),
-                    center: Text('${(progress * 100).toStringAsFixed(0)}%'),
-                  ),
-                  if (_submitting)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 12),
-                      child: Row(children: [CircularProgressIndicator(), SizedBox(width: 12), Text('Submitting to security scan...')]),
-                    ),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  String? _required(String? value) => (value == null || value.trim().isEmpty) ? 'Required' : null;
+  Widget _platformTile({
+    required String title,
+    required bool optional,
+    required File? file,
+    required VoidCallback onPick,
+  }) {
+    final fileName = file == null ? 'No file selected' : file.path.split('/').last;
+    return Card(
+      child: ListTile(
+        title: Text(title),
+        subtitle: Text('$fileName ${optional ? '• Optional' : ''}'),
+        trailing: IconButton(
+          icon: const Icon(Icons.attach_file),
+          onPressed: onPick,
+        ),
+      ),
+    );
+  }
 
-  Future<void> _onContinue() async {
-    if (_step == 0 && !_formKey.currentState!.validate()) return;
-    if (_step == 1) {
-      final hasPlatform = _androidFile != null ||
-          _windowsFile != null ||
-          _macFile != null ||
-          _linuxFiles.isNotEmpty ||
-          _iosPwaUrl.text.trim().isNotEmpty;
-      if (!hasPlatform) {
-        Fluttertoast.showToast(msg: 'Please add at least one platform');
-        return;
-      }
-    }
-    if (_step == 2) {
-      if (_iconFile == null || _screenshots.length < 2 || _screenshots.length > 8) {
-        Fluttertoast.showToast(msg: 'Icon and 2-8 screenshots are required');
-        return;
-      }
-    }
-    if (_step < 3) {
-      setState(() => _step++);
-      return;
-    }
-    await _submit();
+  String? _required(String? value) {
+    if (value == null || value.trim().isEmpty) return 'Required';
+    return null;
+  }
+
+  String? _validateVersion(String? value) {
+    final text = value?.trim() ?? '';
+    if (text.isEmpty) return 'Version is required';
+    final semverPattern = RegExp(r'^\d+\.\d+\.\d+$');
+    if (!semverPattern.hasMatch(text)) return 'Use x.y.z format (example: 1.0.0)';
+    return null;
+  }
+
+  bool _hasAtLeastOnePlatform() {
+    return _androidFile != null ||
+        _windowsFile != null ||
+        _macFile != null ||
+        _linuxFiles.isNotEmpty ||
+        _iosPwaUrl.text.trim().isNotEmpty;
   }
 
   Future<void> _submit() async {
-    setState(() => _submitting = true);
+    FocusScope.of(context).unfocus();
+
+    if (!_formKey.currentState!.validate()) return;
+    if (!_hasAtLeastOnePlatform()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Select at least one platform (Android/iOS/Windows/Mac/Linux).')),
+      );
+      return;
+    }
+    if (_iconFile == null || _screenshots.length < 2 || _screenshots.length > 8) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Provide an app icon and 2–8 screenshots.')),
+      );
+      return;
+    }
+
+    setState(() {
+      _submitting = true;
+      _progress = 0;
+    });
+
     try {
       await ref.read(apiServiceProvider).uploadApp(
             metadata: {
@@ -209,36 +286,48 @@ class _DeveloperUploadScreenState extends ConsumerState<DeveloperUploadScreen> {
             iconFile: _iconFile,
             screenshots: _screenshots,
             onSendProgress: (sent, total) {
-              if (total > 0) {
-                ref.read(uploadStateProvider.notifier).state = sent / total;
-              }
+              if (!mounted) return;
+              if (total <= 0) return;
+              setState(() => _progress = sent / total);
             },
           );
-      Fluttertoast.showToast(msg: 'Upload submitted to security scan queue');
-      if (mounted) Navigator.pop(context);
-    } catch (e) {
-      Fluttertoast.showToast(msg: 'Upload failed: $e');
+
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Upload complete'),
+          content: const Text('Scan started!'),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted) return;
+      context.go('/developer/dashboard');
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))),
+      );
     } finally {
-      setState(() => _submitting = false);
+      if (mounted) {
+        setState(() => _submitting = false);
+      }
     }
   }
 
-  Widget _fileTile(String title, File? file, VoidCallback onPick) {
-    final fileName = file?.path.split('/').last ?? 'No file selected';
-    final fileSize = file == null ? '' : ' • ${(file.lengthSync() / (1024 * 1024)).toStringAsFixed(2)} MB';
-    return ListTile(
-      title: Text(title),
-      subtitle: Text('$fileName$fileSize'),
-      trailing: IconButton(icon: const Icon(Icons.attach_file), onPressed: () async {
-        onPick();
-        setState(() {});
-      }),
+  Future<File?> _pickSingle(List<String> extensions) async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: extensions,
     );
-  }
-
-  Future<void> _pickSingle(List<String> ext, void Function(File?) assign) async {
-    final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ext);
-    if (result != null && result.files.single.path != null) assign(File(result.files.single.path!));
+    final path = result?.files.single.path;
+    if (path == null) return null;
+    return File(path);
   }
 
   Future<void> _pickLinux() async {
@@ -248,8 +337,9 @@ class _DeveloperUploadScreenState extends ConsumerState<DeveloperUploadScreen> {
       allowedExtensions: ['deb', 'appimage', 'rpm'],
     );
     if (result != null) {
-      _linuxFiles = result.paths.whereType<String>().map(File.new).toList();
-      setState(() {});
+      setState(() {
+        _linuxFiles = result.paths.whereType<String>().map(File.new).toList();
+      });
     }
   }
 
@@ -259,8 +349,9 @@ class _DeveloperUploadScreenState extends ConsumerState<DeveloperUploadScreen> {
       type: FileType.image,
     );
     if (result != null) {
-      _screenshots = result.paths.whereType<String>().map(File.new).toList();
-      setState(() {});
+      setState(() {
+        _screenshots = result.paths.whereType<String>().map(File.new).toList();
+      });
     }
   }
 }
