@@ -7,17 +7,17 @@ from datetime import UTC, datetime
 from typing import Any
 
 import resend
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from backend.config import settings
 from backend.database import get_db
 from backend.middleware.auth import get_current_admin
 from backend.models.app import App
 from backend.models.enums import AppStatus
-from backend.models.security_report import SecurityReport
 from backend.models.user import User
 
 logger = logging.getLogger(__name__)
@@ -52,6 +52,7 @@ async def review_queue(
     apps = (
         await db.execute(
             select(App)
+            .options(selectinload(App.security_reports), selectinload(App.developer))
             .where(App.status == AppStatus.review)
             .order_by(desc(App.created_at))
             .offset((page - 1) * limit)
@@ -61,15 +62,8 @@ async def review_queue(
 
     items: list[dict[str, Any]] = []
     for app in apps:
-        report = (
-            await db.execute(
-                select(SecurityReport)
-                .where(SecurityReport.app_id == app.id)
-                .order_by(desc(SecurityReport.scanned_at))
-                .limit(1)
-            )
-        ).scalar_one_or_none()
-        developer = (await db.execute(select(User).where(User.id == app.developer_id))).scalar_one_or_none()
+        report = max(app.security_reports, key=lambda item: item.scanned_at) if app.security_reports else None
+        developer = app.developer
 
         items.append(
             {
@@ -82,7 +76,7 @@ async def review_queue(
                     "supported_platforms": app.supported_platforms,
                     "security_score": app.security_score,
                     "status": app.status.value,
-                    "created_at": app.created_at,
+                    "created_at": app.created_at.isoformat() if app.created_at else None,
                 },
                 "security_report_summary": (
                     {
@@ -92,7 +86,7 @@ async def review_queue(
                         "ai_summary": report.ai_summary,
                         "dangerous_permissions": report.dangerous_permissions,
                         "suspicious_apis": report.suspicious_apis,
-                        "scanned_at": report.scanned_at,
+                        "scanned_at": report.scanned_at.isoformat() if report.scanned_at else None,
                     }
                     if report
                     else None
@@ -113,8 +107,8 @@ async def review_queue(
     return {"page": page, "limit": limit, "total": total, "items": items}
 
 
-@router.post("/apps/{app_id}/approve", response_model=dict[str, str])
-async def approve_app(app_id: str, db: AsyncSession = Depends(get_db)) -> dict[str, str]:
+@router.post("/apps/{app_id}/approve", response_model=dict[str, Any])
+async def approve_app(app_id: str, db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
     try:
         app_uuid = uuid.UUID(app_id)
     except ValueError as exc:
@@ -123,6 +117,8 @@ async def approve_app(app_id: str, db: AsyncSession = Depends(get_db)) -> dict[s
     app = (await db.execute(select(App).where(App.id == app_uuid))).scalar_one_or_none()
     if app is None:
         raise HTTPException(status_code=404, detail="App not found")
+    if app.status != AppStatus.review:
+        raise HTTPException(status_code=400, detail=f"App is in '{app.status.value}' status, not 'review'")
 
     developer = (await db.execute(select(User).where(User.id == app.developer_id))).scalar_one_or_none()
 
@@ -136,11 +132,18 @@ async def approve_app(app_id: str, db: AsyncSession = Depends(get_db)) -> dict[s
         except Exception:
             logger.exception("Failed sending approval email for app %s", app_id)
 
-    return {"message": "App approved"}
+    return {
+        "message": "App approved",
+        "app": {
+            "id": str(app.id),
+            "status": app.status.value,
+            "published_at": app.published_at.isoformat() if app.published_at else None,
+        },
+    }
 
 
-@router.post("/apps/{app_id}/reject", response_model=dict[str, str])
-async def reject_app(app_id: str, payload: RejectRequest, db: AsyncSession = Depends(get_db)) -> dict[str, str]:
+@router.post("/apps/{app_id}/reject", response_model=dict[str, Any])
+async def reject_app(app_id: str, payload: RejectRequest, db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
     try:
         app_uuid = uuid.UUID(app_id)
     except ValueError as exc:
@@ -149,6 +152,8 @@ async def reject_app(app_id: str, payload: RejectRequest, db: AsyncSession = Dep
     app = (await db.execute(select(App).where(App.id == app_uuid))).scalar_one_or_none()
     if app is None:
         raise HTTPException(status_code=404, detail="App not found")
+    if app.status not in {AppStatus.review, AppStatus.scanning}:
+        raise HTTPException(status_code=400, detail=f"App cannot be rejected from '{app.status.value}' status")
 
     developer = (await db.execute(select(User).where(User.id == app.developer_id))).scalar_one_or_none()
 
@@ -161,4 +166,11 @@ async def reject_app(app_id: str, payload: RejectRequest, db: AsyncSession = Dep
         except Exception:
             logger.exception("Failed sending rejection email for app %s", app_id)
 
-    return {"message": "App rejected"}
+    return {
+        "message": "App rejected",
+        "app": {
+            "id": str(app.id),
+            "status": app.status.value,
+            "published_at": app.published_at.isoformat() if app.published_at else None,
+        },
+    }

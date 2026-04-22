@@ -12,5 +12,5 @@ celery_app.conf.update(
     task_acks_late=True,
 )
 
-from backend.workers.security_scan import scan_app  # noqa: F401, E402
 from backend.workers.fix_rejection import process_fix_rejection  # noqa: F401, E402
+from backend.workers.security_scan import scan_app  # noqa: F401, E402

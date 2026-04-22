@@ -36,90 +36,121 @@ class AppDetailScreen extends ConsumerWidget {
       body: detail.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Failed loading app: $e')),
-        data: (app) {
-          final screenshots = List<String>.from(app['screenshots'] ?? const []);
-          final permissions = List<String>.from(app['permissions'] ?? const []);
-          final platforms = List<String>.from(app['platforms'] ?? const []);
-          final score = (app['security_score'] ?? 0) as int;
+        data: (data) {
+          final appData = Map<String, dynamic>.from(data['app'] as Map? ?? const {});
+          final report = data['latest_security_report'] is Map
+              ? Map<String, dynamic>.from(data['latest_security_report'] as Map)
+              : null;
+          final developer = Map<String, dynamic>.from(data['developer'] as Map? ?? const {});
+          final installUrls = Map<String, String>.from(data['install_urls'] as Map? ?? const {});
+
+          final screenshots = List<String>.from(appData['screenshots'] ?? const []);
+          final platforms = List<String>.from(appData['supported_platforms'] ?? const []);
+          final permissions = List<String>.from(report?['dangerous_permissions'] ?? const []);
+          final status = (appData['status'] ?? '').toString().toLowerCase();
+          final score = (report?['score'] ?? appData['security_score'] ?? 0) as int;
+
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              SizedBox(
-                height: 220,
-                child: PageView.builder(
-                  itemCount: screenshots.isEmpty ? 1 : screenshots.length,
-                  itemBuilder: (_, index) {
-                    final url = screenshots.isEmpty ? app['hero_image_url'] ?? '' : screenshots[index];
-                    return ClipRRect(
+              if (screenshots.isNotEmpty) ...[
+                SizedBox(
+                  height: 220,
+                  child: PageView.builder(
+                    itemCount: screenshots.length,
+                    itemBuilder: (_, index) => ClipRRect(
                       borderRadius: BorderRadius.circular(16),
-                      child: CachedNetworkImage(imageUrl: url, fit: BoxFit.cover),
-                    );
-                  },
+                      child: CachedNetworkImage(imageUrl: screenshots[index], fit: BoxFit.cover),
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
+              ],
               Row(
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: CachedNetworkImage(imageUrl: app['icon_url'] ?? '', width: 72, height: 72),
+                    child: CachedNetworkImage(imageUrl: appData['icon_url']?.toString() ?? '', width: 72, height: 72),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(app['name'] ?? '-', style: Theme.of(context).textTheme.headlineSmall),
-                      Text(app['developer_name'] ?? '-'),
-                    ]),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(appData['name']?.toString() ?? '-', style: Theme.of(context).textTheme.headlineSmall),
+                        Text(developer['email']?.toString() ?? '-'),
+                      ],
+                    ),
                   ),
-                  SecurityBadge(
-                    score: score,
-                    aiHint: app['security_summary'] ?? 'Security scan completed',
-                    size: SecurityBadgeSize.large,
-                  ),
+                  _buildSecurityWidget(status: status, score: score, report: report),
                 ],
               ),
               const SizedBox(height: 8),
-              Text('Risk level: ${_riskLabel(score)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text('Status: ${_statusLabel(status)}', style: const TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
-              Text(app['security_summary'] ?? 'AI security summary unavailable'),
+              Text(report?['ai_summary']?.toString() ?? 'AI security summary unavailable'),
               const SizedBox(height: 16),
-              const Text('Available Platforms', style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: platforms
-                    .map((platform) => FilledButton(
-                          onPressed: () => ref.read(installServiceProvider).installApp(
-                                context: context,
-                                app: app,
-                                platform: platform,
-                              ),
+              if (status == 'approved') ...[
+                const Text('Available Platforms', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: platforms
+                      .map(
+                        (platform) => FilledButton(
+                          onPressed: () async {
+                            final payload = _buildInstallPayload(installUrls);
+                            final downloadUrl = _downloadUrlForPlatform(platform, installUrls);
+                            if (downloadUrl == null || downloadUrl.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('No install URL available for ${platform.toUpperCase()}')),
+                              );
+                              return;
+                            }
+                            await ref.read(installServiceProvider).installApp(
+                                  context: context,
+                                  app: payload,
+                                  platform: platform,
+                                );
+                          },
                           child: Text(_buttonLabel(platform)),
-                        ))
-                    .toList(),
-              ),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ] else ...[
+                const Text('Installs are available only after approval.'),
+              ],
               TextButton(
                 onPressed: () => context.push('/apps/$appId/security-report'),
                 child: const Text('View Full Security Report'),
               ),
               const SizedBox(height: 12),
-              Text(app['description'] ?? ''),
-              const SizedBox(height: 12),
-              const Text('Screenshots', style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              SizedBox(
-                height: 120,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemBuilder: (_, i) => CachedNetworkImage(imageUrl: screenshots[i]),
-                  separatorBuilder: (_, __) => const SizedBox(width: 8),
-                  itemCount: screenshots.length,
+              Text(appData['description']?.toString() ?? ''),
+              if (screenshots.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                const Text('Screenshots', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 120,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemBuilder: (_, i) => CachedNetworkImage(imageUrl: screenshots[i]),
+                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    itemCount: screenshots.length,
+                  ),
                 ),
-              ),
+              ],
               const SizedBox(height: 12),
               const Text('Permissions', style: TextStyle(fontWeight: FontWeight.bold)),
-              ...permissions.map((p) => ListTile(leading: const Icon(Icons.lock_outline), title: Text(p))),
+              if (permissions.isEmpty)
+                const ListTile(
+                  leading: Icon(Icons.info_outline),
+                  title: Text('No dangerous permissions reported yet.'),
+                )
+              else
+                ...permissions.map((p) => ListTile(leading: const Icon(Icons.lock_outline), title: Text(p))),
               const Divider(),
               const ListTile(title: Text('Reviews'), subtitle: Text('Coming soon')),
             ],
@@ -127,6 +158,55 @@ class AppDetailScreen extends ConsumerWidget {
         },
       ),
     );
+  }
+
+  Widget _buildSecurityWidget({
+    required String status,
+    required int score,
+    required Map<String, dynamic>? report,
+  }) {
+    if (status == 'scanning' || status == 'pending') {
+      return const Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+          SizedBox(height: 4),
+          Text('Scanning...'),
+        ],
+      );
+    }
+
+    if (status == 'review') {
+      return const Chip(label: Text('Under Review'));
+    }
+
+    if (report == null) {
+      return const Chip(label: Text('Score not available'));
+    }
+
+    return SecurityBadge(
+      score: score,
+      aiHint: report['ai_summary']?.toString() ?? 'Security scan completed',
+      size: SecurityBadgeSize.large,
+    );
+  }
+
+  String? _downloadUrlForPlatform(String platform, Map<String, String> installUrls) {
+    final key = platform.toLowerCase();
+    if (key == 'linux') {
+      return installUrls['linux_deb'] ?? installUrls['linux_appimage'] ?? installUrls['linux_rpm'];
+    }
+    return installUrls[key];
+  }
+
+  Map<String, dynamic> _buildInstallPayload(Map<String, String> installUrls) {
+    return {
+      'android_download_url': installUrls['android'],
+      'ios_pwa_url': installUrls['ios'],
+      'windows_download_url': installUrls['windows'],
+      'mac_download_url': installUrls['mac'],
+      'linux_download_url': installUrls['linux_deb'] ?? installUrls['linux_appimage'] ?? installUrls['linux_rpm'],
+    };
   }
 
   String _buttonLabel(String platform) {
@@ -146,11 +226,20 @@ class AppDetailScreen extends ConsumerWidget {
     }
   }
 
-  String _riskLabel(int score) {
-    if (score >= 85) return 'SAFE';
-    if (score >= 65) return 'LOW RISK';
-    if (score >= 45) return 'CAUTION';
-    if (score >= 25) return 'RISKY';
-    return 'DANGEROUS';
+  String _statusLabel(String status) {
+    switch (status) {
+      case 'scanning':
+        return 'Scanning...';
+      case 'review':
+        return 'Under Review';
+      case 'approved':
+        return 'Approved';
+      case 'pending':
+        return 'Pending';
+      case 'rejected':
+        return 'Rejected';
+      default:
+        return status;
+    }
   }
 }

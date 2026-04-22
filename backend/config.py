@@ -23,19 +23,21 @@ class Settings(BaseSettings):
     mobsf_url: str = Field(alias="MOBSF_URL")
     mobsf_api_key: str = Field(alias="MOBSF_API_KEY")
     virustotal_api_key: str = Field(alias="VIRUSTOTAL_API_KEY")
-    anthropic_api_key: str = Field(alias="ANTHROPIC_API_KEY")
+    anthropic_api_key: str = Field(default="", alias="ANTHROPIC_API_KEY")
 
     resend_api_key: str = Field(alias="RESEND_API_KEY")
     email_from: str = Field(alias="EMAIL_FROM")
 
-    r2_account_id: str = Field(alias="R2_ACCOUNT_ID")
-    r2_access_key_id: str = Field(alias="R2_ACCESS_KEY_ID")
-    r2_secret_access_key: str = Field(alias="R2_SECRET_ACCESS_KEY")
+    r2_account_id: str = Field(default="", alias="R2_ACCOUNT_ID")
+    r2_access_key_id: str = Field(default="", alias="R2_ACCESS_KEY_ID")
+    r2_secret_access_key: str = Field(default="", alias="R2_SECRET_ACCESS_KEY")
     r2_bucket_name: str = Field(alias="R2_BUCKET_NAME")
-    r2_endpoint: str = Field(alias="R2_ENDPOINT")
+    r2_endpoint: str = Field(default="", alias="R2_ENDPOINT")
 
-    stripe_secret_key: str = Field(alias="STRIPE_SECRET_KEY")
-    stripe_webhook_secret: str = Field(alias="STRIPE_WEBHOOK_SECRET")
+    stripe_secret_key: str = Field(default="", alias="STRIPE_SECRET_KEY")
+    stripe_webhook_secret: str = Field(default="", alias="STRIPE_WEBHOOK_SECRET")
+    stripe_pro_price_id: str = Field(default="price_pro_monthly", alias="STRIPE_PRO_PRICE_ID")
+    stripe_studio_price_id: str = Field(default="price_studio_monthly", alias="STRIPE_STUDIO_PRICE_ID")
 
     port: int = Field(default=8000, alias="PORT")
     frontend_url: str = Field(alias="FRONTEND_URL")

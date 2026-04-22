@@ -178,11 +178,11 @@ class ApiService {
       final response = await _dio.get(
         '/apps',
         queryParameters: {
-          if (query != null && query.isNotEmpty) 'query': query,
+          if (query != null && query.isNotEmpty) 'q': query,
           if (platform != null && platform != 'all') 'platform': platform,
           if (category != null && category != 'all') 'category': category,
           'page': page,
-          'page_size': pageSize,
+          'limit': pageSize,
         },
       );
 
@@ -269,7 +269,7 @@ class ApiService {
     try {
       final response = await _dio.get(
         '/admin/queue',
-        queryParameters: {'page': page, 'page_size': pageSize},
+        queryParameters: {'page': page, 'limit': pageSize},
       );
       final data = response.data;
       if (data is List) {
@@ -321,4 +321,12 @@ class ApiService {
     }
   }
 
+  Future<Map<String, dynamic>> getFixRejectionStatus(String reportId) async {
+    try {
+      final response = await _dio.get('/payments/fix-rejection/$reportId');
+      return Map<String, dynamic>.from(response.data as Map);
+    } catch (error) {
+      _throwReadableError(error);
+    }
+  }
 }
