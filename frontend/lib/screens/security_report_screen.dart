@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../constants.dart';
 import '../widgets/security_badge.dart';
 import 'app_detail_screen.dart';
 
@@ -18,7 +19,7 @@ class SecurityReportScreen extends ConsumerWidget {
         title: const Text('Security Report'),
         actions: [
           IconButton(
-            onPressed: () => Share.share('http://34.242.156.156/apps/$appId/security-report'),
+            onPressed: () => Share.share('${AppConstants.storePublicUrl}/apps/$appId/security-report'),
             icon: const Icon(Icons.share),
           )
         ],
