@@ -75,23 +75,28 @@ class AppFeedNotifier extends AsyncNotifier<AppFeedState> {
 
   Future<void> updateFilters({String? query, String? platform, String? category}) async {
     final current = state.valueOrNull ?? const AppFeedState();
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
+    state = AsyncData(current.copyWith(loadingMore: true));
+    try {
       final api = ref.read(apiServiceProvider);
       final apps = await api.getApps(
         query: query ?? current.query,
         platform: platform ?? current.platform,
         category: category ?? current.category,
       );
-      return current.copyWith(
-        apps: apps,
-        page: 1,
-        hasMore: apps.length >= 20,
-        query: query ?? current.query,
-        platform: platform ?? current.platform,
-        category: category ?? current.category,
+      state = AsyncData(
+        current.copyWith(
+          apps: apps,
+          page: 1,
+          hasMore: apps.length >= 20,
+          query: query ?? current.query,
+          platform: platform ?? current.platform,
+          category: category ?? current.category,
+          loadingMore: false,
+        ),
       );
-    });
+    } catch (e, st) {
+      state = AsyncError(e, st);
+    }
   }
 
   Future<void> loadMore() async {
@@ -223,7 +228,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _filters(BuildContext context, AppFeedState state) {
-    const platforms = ['all', 'android', 'iphone', 'windows', 'mac', 'linux'];
+    const platforms = ['all', 'android', 'ios', 'windows', 'mac', 'linux'];
+    const platformLabels = {
+      'all': 'ALL',
+      'android': 'ANDROID',
+      'ios': 'IPHONE',
+      'windows': 'WINDOWS',
+      'mac': 'MAC',
+      'linux': 'LINUX',
+    };
     const categories = ['all', 'games', 'tools', 'business', 'education', 'health'];
 
     return Padding(
@@ -258,7 +271,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             children: platforms
                 .map(
                   (platform) => FilterChip(
-                    label: Text(platform.toUpperCase()),
+                    label: Text(platformLabels[platform] ?? platform.toUpperCase()),
                     selected: state.platform == platform,
                     onSelected: (_) {
                       ref.read(appFeedProvider.notifier).updateFilters(platform: platform);
@@ -290,7 +303,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Widget _appCard(BuildContext context, Map<String, dynamic> app) {
     final score = (app['security_score'] as num?)?.toInt() ?? 0;
-    final appPlatforms = List<String>.from(app['platforms'] ?? const <String>[]);
+    final appPlatforms = List<String>.from(app['supported_platforms'] ?? const <String>[]);
+    final riskBadge = app['risk_badge']?.toString() ?? 'unknown';
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -318,7 +332,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
               const SizedBox(height: 2),
               Text(
-                app['developer_name'] ?? '-',
+                app['category']?.toString() ?? '',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.bodySmall,
@@ -326,7 +340,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               const SizedBox(height: 6),
               SecurityBadge(
                 score: score,
-                aiHint: app['security_summary'] ?? 'Security scan completed',
+                aiHint: 'Risk level: $riskBadge',
               ),
               if (score >= 85) ...[
                 const SizedBox(height: 6),

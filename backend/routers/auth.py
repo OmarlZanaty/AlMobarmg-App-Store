@@ -109,7 +109,7 @@ async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db))
     new_user = User(
         email=email,
         name=payload.name.strip(),
-        password_hash=hash_password(payload.password),
+        password_hash=await hash_password(payload.password),
         role=UserRole.developer,
         is_email_verified=True,
     )
@@ -126,7 +126,7 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)) -> Lo
     result = await db.execute(select(User).where(User.email == email))
     user = result.scalar_one_or_none()
 
-    if not user or not verify_password(payload.password, user.password_hash):
+    if not user or not await verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
 
     if not user.is_email_verified:
@@ -255,7 +255,7 @@ async def reset_password(payload: ResetPasswordRequest, db: AsyncSession = Depen
     if user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-    user.password_hash = hash_password(payload.new_password)
+    user.password_hash = await hash_password(payload.new_password)
     await db.commit()
     await redis_client.delete(f"reset:{email}")
 

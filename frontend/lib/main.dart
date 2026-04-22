@@ -6,11 +6,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 
+import 'screens/admin/queue_screen.dart';
 import 'screens/app_detail_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
+import 'screens/auth/reset_password_screen.dart';
 import 'screens/auth/verify_email_screen.dart';
-import 'screens/admin/queue_screen.dart';
 import 'screens/developer/dashboard_screen.dart';
 import 'screens/developer/upload_screen.dart';
 import 'screens/fix_rejection_screen.dart';
@@ -79,6 +80,13 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) =>
             VerifyEmailScreen(email: state.uri.queryParameters['email'] ?? ''),
       ),
+      GoRoute(
+        path: '/reset-password',
+        builder: (context, state) => ResetPasswordScreen(
+          email: state.uri.queryParameters['email'] ?? '',
+          token: state.uri.queryParameters['token'] ?? '',
+        ),
+      ),
       GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
       GoRoute(
         path: '/apps/:id',
@@ -110,7 +118,8 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       final onAuthPage =
           state.matchedLocation == '/login' ||
           state.matchedLocation == '/register' ||
-          state.matchedLocation == '/verify-email';
+          state.matchedLocation == '/verify-email' ||
+          state.matchedLocation == '/reset-password';
       if (!auth.isAuthenticated && !onAuthPage && state.matchedLocation != '/') {
         return '/login';
       }

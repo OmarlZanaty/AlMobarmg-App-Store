@@ -5,10 +5,11 @@ import uuid
 from typing import Annotated, Any
 from urllib.parse import urlparse
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import and_, desc, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from backend.database import get_db
 from backend.middleware.auth import get_current_developer, get_optional_user
@@ -17,6 +18,7 @@ from backend.models.enums import AppStatus, InstallSource, Platform, Subscriptio
 from backend.models.install import Install
 from backend.models.security_report import SecurityReport
 from backend.models.user import User
+from backend.services.auth_service import redis_client
 from backend.services.storage_service import storage_service
 from backend.workers.security_scan import scan_app
 
@@ -138,7 +140,7 @@ async def create_app(
     description: Annotated[str, Form(min_length=50)],
     short_description: Annotated[str, Form(min_length=1, max_length=200)],
     category: Annotated[str, Form(min_length=1)],
-    version: Annotated[str, Form(min_length=1, max_length=64)] = "1.0.0",
+    version: Annotated[str, Form(min_length=1, max_length=64)] = Form(...),
     android_file: UploadFile | None = File(default=None),
     ios_pwa_url: str | None = Form(default=None),
     windows_file: UploadFile | None = File(default=None),
@@ -376,14 +378,21 @@ async def get_app(app_id: str, db: AsyncSession = Depends(get_db)) -> AppDetailR
     except ValueError as exc:
         raise HTTPException(status_code=400, detail="Invalid app_id") from exc
 
-    app = (await db.execute(select(App).where(App.id == app_uuid))).scalar_one_or_none()
+    app = (
+        await db.execute(
+            select(App)
+            .options(selectinload(App.security_reports), selectinload(App.developer))
+            .where(App.id == app_uuid)
+        )
+    ).scalar_one_or_none()
     if app is None:
         raise HTTPException(status_code=404, detail="App not found")
 
-    report = (
-        await db.execute(select(SecurityReport).where(SecurityReport.app_id == app.id).order_by(desc(SecurityReport.scanned_at)).limit(1))
-    ).scalar_one_or_none()
-    developer = (await db.execute(select(User).where(User.id == app.developer_id))).scalar_one()
+    report: SecurityReport | None = None
+    if app.security_reports:
+        report = max(app.security_reports, key=lambda item: item.scanned_at)
+
+    developer = app.developer
 
     platform_counts_stmt = select(Install.platform, func.count(Install.id)).where(Install.app_id == app.id).group_by(Install.platform)
     counts_rows = (await db.execute(platform_counts_stmt)).all()
@@ -419,8 +428,8 @@ async def get_app(app_id: str, db: AsyncSession = Depends(get_db)) -> AppDetailR
             "icon_url": app.icon_url,
             "screenshots": app.screenshots,
             "total_installs": app.total_installs,
-            "created_at": app.created_at,
-            "published_at": app.published_at,
+            "created_at": app.created_at.isoformat() if app.created_at else None,
+            "published_at": app.published_at.isoformat() if app.published_at else None,
         },
         latest_security_report=(
             {
@@ -428,7 +437,8 @@ async def get_app(app_id: str, db: AsyncSession = Depends(get_db)) -> AppDetailR
                 "score": report.score,
                 "risk_level": report.risk_level.value,
                 "ai_summary": report.ai_summary,
-                "scanned_at": report.scanned_at,
+                "dangerous_permissions": report.dangerous_permissions,
+                "scanned_at": report.scanned_at.isoformat() if report.scanned_at else None,
             }
             if report
             else None
@@ -447,9 +457,18 @@ async def get_app(app_id: str, db: AsyncSession = Depends(get_db)) -> AppDetailR
 async def install_app(
     app_id: str,
     payload: InstallRequest,
+    request: Request,
     optional_user: User | None = Depends(get_optional_user),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, str]:
+    ip_address = request.client.host if request.client else "unknown"
+    rate_key = f"install_rate:{ip_address}:{app_id}"
+    count = await redis_client.incr(rate_key)
+    if count == 1:
+        await redis_client.expire(rate_key, 3600)
+    if count > 5:
+        raise HTTPException(status_code=429, detail="Too many install requests")
+
     try:
         app_uuid = uuid.UUID(app_id)
     except ValueError as exc:
@@ -458,6 +477,9 @@ async def install_app(
     app = (await db.execute(select(App).where(App.id == app_uuid))).scalar_one_or_none()
     if app is None:
         raise HTTPException(status_code=404, detail="App not found")
+
+    if app.status != AppStatus.approved:
+        raise HTTPException(status_code=403, detail="App is not available for installation")
 
     if payload.platform == Platform.ios:
         if not app.ios_pwa_url:
@@ -518,8 +540,8 @@ async def list_developer_apps(
             "security_score": app.security_score,
             "supported_platforms": app.supported_platforms,
             "file_sizes": app.file_sizes,
-            "created_at": app.created_at,
-            "published_at": app.published_at,
+            "created_at": app.created_at.isoformat() if app.created_at else None,
+            "published_at": app.published_at.isoformat() if app.published_at else None,
             "total_installs": app.total_installs,
         }
         for app in rows

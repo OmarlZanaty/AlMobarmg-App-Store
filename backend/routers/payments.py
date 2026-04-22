@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import uuid
 
@@ -27,8 +26,8 @@ router = APIRouter(prefix="/api/payments", tags=["payments"])
 stripe.api_key = settings.stripe_secret_key
 
 PLAN_PRICE_IDS = {
-    SubscriptionPlan.pro: "price_pro_monthly",
-    SubscriptionPlan.studio: "price_studio_monthly",
+    SubscriptionPlan.pro: settings.stripe_pro_price_id,
+    SubscriptionPlan.studio: settings.stripe_studio_price_id,
 }
 
 
@@ -83,6 +82,36 @@ async def create_fix_rejection_payment(
     }
 
 
+@router.get("/fix-rejection/{report_id}")
+async def get_fix_rejection_report(
+    report_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    try:
+        report_uuid = uuid.UUID(report_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid report_id") from exc
+
+    result = await db.execute(
+        select(FixRejectionReport).where(
+            FixRejectionReport.id == report_uuid,
+            FixRejectionReport.developer_id == current_user.id,
+        )
+    )
+    report = result.scalar_one_or_none()
+    if report is None:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    return {
+        "id": str(report.id),
+        "status": report.status.value,
+        "rejection_reason": report.rejection_reason,
+        "ai_diagnosis": report.ai_diagnosis,
+        "created_at": report.created_at.isoformat() if report.created_at else None,
+    }
+
+
 @router.post("/webhook")
 async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)) -> dict[str, bool]:
     payload = await request.body()
@@ -129,6 +158,10 @@ async def create_subscription(
     if payload.plan not in {SubscriptionPlan.pro, SubscriptionPlan.studio}:
         raise HTTPException(status_code=400, detail="Invalid plan")
 
+    price_id = PLAN_PRICE_IDS[payload.plan]
+    if not price_id:
+        raise HTTPException(status_code=500, detail="Stripe price ID is not configured")
+
     existing = await db.execute(
         select(Subscription).where(Subscription.developer_id == current_developer.id).order_by(Subscription.created_at.desc())
     )
@@ -143,7 +176,6 @@ async def create_subscription(
         )
         customer_id = customer.id
 
-    price_id = PLAN_PRICE_IDS[payload.plan]
     stripe_subscription = await asyncio.to_thread(
         stripe.Subscription.create,
         customer=customer_id,

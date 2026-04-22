@@ -18,7 +18,7 @@ class _DeveloperUploadScreenState extends ConsumerState<DeveloperUploadScreen> {
   final _formKey = GlobalKey<FormState>();
 
   final _name = TextEditingController();
-  final _version = TextEditingController(text: '1.0.0');
+  final _versionController = TextEditingController(text: '1.0.0');
   final _shortDescription = TextEditingController();
   final _description = TextEditingController();
   final _category = TextEditingController(text: 'Tools');
@@ -37,7 +37,7 @@ class _DeveloperUploadScreenState extends ConsumerState<DeveloperUploadScreen> {
   @override
   void dispose() {
     _name.dispose();
-    _version.dispose();
+    _versionController.dispose();
     _shortDescription.dispose();
     _description.dispose();
     _category.dispose();
@@ -67,7 +67,7 @@ class _DeveloperUploadScreenState extends ConsumerState<DeveloperUploadScreen> {
               ),
               const SizedBox(height: 10),
               TextFormField(
-                controller: _version,
+                controller: _versionController,
                 decoration: const InputDecoration(
                   labelText: 'Version',
                   hintText: 'x.y.z (example: 1.2.0)',
@@ -273,7 +273,7 @@ class _DeveloperUploadScreenState extends ConsumerState<DeveloperUploadScreen> {
       await ref.read(apiServiceProvider).uploadApp(
             metadata: {
               'name': _name.text.trim(),
-              'version': _version.text.trim(),
+              'version': _versionController.text.trim(),
               'short_description': _shortDescription.text.trim(),
               'description': _description.text.trim(),
               'category': _category.text.trim(),

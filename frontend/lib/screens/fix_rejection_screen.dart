@@ -1,16 +1,13 @@
 import 'dart:io';
 
-import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
-import '../main.dart';
 import '../services/api_service.dart';
 import 'developer/upload_screen.dart';
-import 'home_screen.dart';
 
 class FixRejectionScreen extends ConsumerStatefulWidget {
   const FixRejectionScreen({super.key});
@@ -252,21 +249,14 @@ class _FixRejectionScreenState extends ConsumerState<FixRejectionScreen> {
   Future<void> _createPaymentIntent() async {
     setState(() => _busy = true);
     try {
-      final dio = Dio();
       final api = ref.read(apiServiceProvider);
-      final formData = FormData.fromMap({
-        'rejection_reason': _reasonController.text.trim(),
-        if (_androidFile != null) 'android_file': await MultipartFile.fromFile(_androidFile!.path),
-      });
-
-      final response = await dio.post(
-        '${api.baseUrl}/payments/fix-rejection',
-        data: formData,
-        options: Options(headers: await _authHeaders()),
+      final response = await api.createFixRejectionPayment(
+        _reasonController.text.trim(),
+        androidFile: _androidFile,
       );
 
-      _clientSecret = response.data['payment_intent_client_secret']?.toString();
-      _reportId = response.data['report_id']?.toString();
+      _clientSecret = response['payment_intent_client_secret']?.toString();
+      _reportId = response['report_id']?.toString();
       if (_clientSecret == null || _reportId == null) {
         throw Exception('Missing payment details from server');
       }
@@ -276,13 +266,6 @@ class _FixRejectionScreenState extends ConsumerState<FixRejectionScreen> {
     } finally {
       setState(() => _busy = false);
     }
-  }
-
-  Future<Map<String, String>> _authHeaders() async {
-    final storage = ref.read(secureStorageProvider);
-    final token = await storage.read(key: 'access_token');
-    if (token == null || token.isEmpty) return {};
-    return {'Authorization': 'Bearer $token'};
   }
 
   Future<void> _pay() async {
@@ -311,7 +294,6 @@ class _FixRejectionScreenState extends ConsumerState<FixRejectionScreen> {
 
   Future<void> _pollResult() async {
     final api = ref.read(apiServiceProvider);
-    final dio = Dio();
 
     for (var i = 0; i < 40; i++) {
       await Future<void>.delayed(const Duration(seconds: 4));
@@ -321,11 +303,7 @@ class _FixRejectionScreenState extends ConsumerState<FixRejectionScreen> {
       if (i > 10) setState(() => _processingStatus = 'Generating fix guide...');
 
       try {
-        final response = await dio.get(
-          '${api.baseUrl}/apps/fix-rejection/$_reportId',
-          options: Options(headers: await _authHeaders()),
-        );
-        final body = Map<String, dynamic>.from(response.data as Map);
+        final body = await api.getFixRejectionStatus(_reportId!);
         if (body['status'] == 'completed') {
           setState(() {
             _result = Map<String, dynamic>.from(body['ai_diagnosis'] as Map? ?? {});

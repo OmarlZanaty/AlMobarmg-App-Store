@@ -23,6 +23,7 @@ from backend.routers.auth import router as auth_router
 from backend.routers.health import router as health_router
 from backend.routers.payments import router as payments_router
 from backend.services.auth_service import redis_client
+from backend.services.storage_service import storage_service
 
 logging.config.dictConfig(get_logging_config())
 logger = get_logger("backend.main")
@@ -42,6 +43,9 @@ async def lifespan(_: FastAPI):
     try:
         async with engine.connect() as connection:
             await connection.execute(text("SELECT 1"))
+
+        if settings.r2_endpoint:
+            storage_service._get_client()
     except SQLAlchemyError as exc:
         raise RuntimeError("Database connection failed during startup") from exc
 
@@ -58,7 +62,7 @@ app = FastAPI(title="Al Mobarmg Store API", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     TrustedHostMiddleware,
-    allowed_hosts=["34.242.156.156", "localhost", "127.0.0.1"],
+    allowed_hosts=["34.242.156.156", "localhost", "127.0.0.1", "*"],
 )
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestLoggingMiddleware)
@@ -93,7 +97,11 @@ async def validation_exception_handler(_: Request, exc: RequestValidationError) 
 
 @app.exception_handler(SQLAlchemyError)
 async def sqlalchemy_exception_handler(_: Request, exc: SQLAlchemyError) -> JSONResponse:
-    return JSONResponse(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, content={"error": str(exc)})
+    logger.exception("Database error: %s", exc)
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={"error": "A database error occurred. Please try again."},
+    )
 
 
 @app.exception_handler(Exception)

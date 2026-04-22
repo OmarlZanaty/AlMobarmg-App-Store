@@ -28,10 +28,30 @@ class SecurityReportScreen extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Unable to load report: $e')),
         data: (data) {
-          final score = (data['security_score'] ?? 0) as int;
-          final vt = data['virus_total'] ?? {'flagged_engines': 0, 'total_engines': 0};
-          final findings = List<String>.from(data['mobsf_findings'] ?? const []);
-          final permissions = List<String>.from(data['permissions'] ?? const []);
+          final appData = Map<String, dynamic>.from(data['app'] as Map? ?? const {});
+          final report = data['latest_security_report'] is Map
+              ? Map<String, dynamic>.from(data['latest_security_report'] as Map)
+              : null;
+
+          if (report == null) {
+            return ListView(
+              padding: const EdgeInsets.all(16),
+              children: const [
+                ListTile(
+                  leading: Icon(Icons.pending_actions),
+                  title: Text('Security scan not yet completed'),
+                  subtitle: Text('Please check back later for the latest scan results.'),
+                ),
+                SizedBox(height: 12),
+                Text('For full technical report, contact the developer.'),
+              ],
+            );
+          }
+
+          final score = (report['score'] ?? appData['security_score'] ?? 0) as int;
+          final aiSummary = report['ai_summary'] as String? ?? 'No AI summary available';
+          final riskLevel = report['risk_level'] as String? ?? 'unknown';
+          final scannedAt = report['scanned_at']?.toString() ?? 'Unknown';
 
           return ListView(
             padding: const EdgeInsets.all(16),
@@ -39,51 +59,35 @@ class SecurityReportScreen extends ConsumerWidget {
               Center(
                 child: SecurityBadge(
                   score: score,
-                  aiHint: data['security_summary'] ?? 'AI summary unavailable',
+                  aiHint: aiSummary,
                   size: SecurityBadgeSize.large,
                 ),
               ),
               const SizedBox(height: 12),
-              Center(child: Text('Risk level: ${_riskLabel(score)}')),
+              Center(child: Text('Risk level: ${riskLevel.toUpperCase()}')),
+              const SizedBox(height: 8),
+              Center(child: Text('Scanned at: $scannedAt')),
               const SizedBox(height: 12),
-              Text(data['security_summary'] ?? 'No AI summary available.'),
-              const SizedBox(height: 12),
-              const Text('Permissions breakdown', style: TextStyle(fontWeight: FontWeight.bold)),
-              ...permissions.map((permission) => ListTile(
-                    leading: const Icon(Icons.verified_user_outlined),
-                    title: Text(permission),
-                    subtitle: Text(_permissionExplanation(permission)),
-                  )),
-              const Divider(),
-              ListTile(
-                title: const Text('VirusTotal result'),
-                subtitle: Text('${vt['flagged_engines']} of ${vt['total_engines']} engines flagged this app.'),
+              Text(aiSummary),
+              const Divider(height: 24),
+              const ListTile(
+                title: Text('Permissions breakdown'),
+                subtitle: Text('Full permission details available after scan'),
               ),
               const Divider(),
-              const Text('MobSF findings summary', style: TextStyle(fontWeight: FontWeight.bold)),
-              ...findings.map((f) => ListTile(leading: const Icon(Icons.report), title: Text(f))),
+              const ListTile(
+                title: Text('VirusTotal result'),
+                subtitle: Text('VirusTotal results available in developer dashboard'),
+              ),
+              const Divider(),
+              const ListTile(
+                title: Text('Technical report'),
+                subtitle: Text('For full technical report, contact the developer'),
+              ),
             ],
           );
         },
       ),
     );
-  }
-
-  String _riskLabel(int score) {
-    if (score >= 85) return 'SAFE';
-    if (score >= 65) return 'LOW RISK';
-    if (score >= 45) return 'CAUTION';
-    if (score >= 25) return 'RISKY';
-    return 'DANGEROUS';
-  }
-
-  String _permissionExplanation(String permission) {
-    final p = permission.toLowerCase();
-    if (p.contains('camera')) return 'App can access your camera';
-    if (p.contains('location')) return 'App can track your location';
-    if (p.contains('contacts')) return 'App can read your contacts';
-    if (p.contains('microphone')) return 'App can record audio';
-    if (p.contains('storage')) return 'App can read/write your files';
-    return 'Permission requested by the app.';
   }
 }
