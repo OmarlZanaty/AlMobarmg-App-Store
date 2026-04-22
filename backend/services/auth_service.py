@@ -11,7 +11,7 @@ from redis.asyncio import Redis
 
 from backend.config import settings
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["pbkdf2_sha256", "bcrypt"], deprecated="auto")
 redis_client: Redis = Redis.from_url(settings.redis_url, decode_responses=True)
 
 ACCESS_TOKEN_EXPIRE_MINUTES = 15
