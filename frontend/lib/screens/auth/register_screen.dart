@@ -45,8 +45,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       });
 
       if (!mounted) return;
-      final encodedEmail = Uri.encodeQueryComponent(_emailController.text.trim());
-      context.go('/verify-email?email=$encodedEmail');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Account created successfully. You can log in now.')),
+      );
+      context.go('/login');
     } catch (error) {
       if (!mounted) return;
       final message = error.toString().replaceFirst('Exception: ', '');
