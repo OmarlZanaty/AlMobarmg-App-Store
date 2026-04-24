@@ -1,165 +1,288 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-const Color _primaryColor = Color(0xFF1565C0);
-const Color _secondaryColor = Color(0xFF00897B);
-const Color _errorColor = Color(0xFFD32F2F);
-const Color _lightSurface = Colors.white;
-const Color _darkSurface = Color(0xFF121212);
+const kNavyDeep = Color(0xFF1A237E);
+const kNavyMid = Color(0xFF283593);
+const kNavyLight = Color(0xFF3949AB);
+const kCyan = Color(0xFF29B6F6);
+const kCyanDark = Color(0xFF0288D1);
+const kCyanLight = Color(0xFF4FC3F7);
+const kSurface = Color(0xFFF0F7FF);
+const kSafeGreen = Color(0xFF00C896);
+const kCautionAmb = Color(0xFFFFB020);
+const kDangerRed = Color(0xFFFF4D4D);
 
-ThemeData lightTheme() {
-  const colorScheme = ColorScheme(
+const kBrandGradient = LinearGradient(
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+  colors: [kNavyDeep, kCyanDark, kCyan],
+  stops: [0.0, 0.5, 1.0],
+);
+
+ThemeData get appLightTheme {
+  final cs = ColorScheme.fromSeed(
+    seedColor: kCyan,
     brightness: Brightness.light,
-    primary: _primaryColor,
+    primary: kCyan,
     onPrimary: Colors.white,
-    secondary: _secondaryColor,
+    secondary: kNavyDeep,
     onSecondary: Colors.white,
-    error: _errorColor,
+    surface: Colors.white,
+    onSurface: const Color(0xFF0D1B3E),
+    error: kDangerRed,
     onError: Colors.white,
-    surface: _lightSurface,
-    onSurface: Color(0xFF1A1C1E),
-    tertiary: Color(0xFF5E35B1),
-    onTertiary: Colors.white,
-    primaryContainer: Color(0xFFD6E4FF),
-    onPrimaryContainer: Color(0xFF001C3B),
-    secondaryContainer: Color(0xFFB7F1E8),
-    onSecondaryContainer: Color(0xFF00201D),
-    tertiaryContainer: Color(0xFFE8DDFF),
-    onTertiaryContainer: Color(0xFF1E1040),
-    surfaceContainerHighest: Color(0xFFE1E3E6),
-    onSurfaceVariant: Color(0xFF43474C),
-    outline: Color(0xFF74777F),
-    outlineVariant: Color(0xFFC4C7CF),
-    shadow: Color(0x33000000),
-    scrim: Color(0x66000000),
-    inverseSurface: Color(0xFF2F3033),
-    onInverseSurface: Color(0xFFF0F0F3),
-    inversePrimary: Color(0xFFA8C7FF),
-    surfaceTint: _primaryColor,
+    primaryContainer: const Color(0xFFE8F4FD),
+    secondaryContainer: const Color(0xFFE8EAF6),
+    tertiaryContainer: const Color(0xFFE0F7FA),
   );
 
-  return _buildTheme(colorScheme);
+  return _buildTheme(cs);
 }
 
-ThemeData darkTheme() {
-  const colorScheme = ColorScheme(
+ThemeData get appDarkTheme {
+  final cs = ColorScheme.fromSeed(
+    seedColor: kCyan,
     brightness: Brightness.dark,
-    primary: Color(0xFFA8C7FF),
-    onPrimary: Color(0xFF003061),
-    secondary: Color(0xFF7BD5C8),
-    onSecondary: Color(0xFF003731),
-    error: Color(0xFFF2B8B5),
-    onError: Color(0xFF601410),
-    surface: _darkSurface,
-    onSurface: Color(0xFFE3E3E6),
-    tertiary: Color(0xFFD0BCFF),
-    onTertiary: Color(0xFF37275A),
-    primaryContainer: Color(0xFF00468A),
-    onPrimaryContainer: Color(0xFFD6E4FF),
-    secondaryContainer: Color(0xFF005049),
-    onSecondaryContainer: Color(0xFFB7F1E8),
-    tertiaryContainer: Color(0xFF4F3F73),
-    onTertiaryContainer: Color(0xFFE8DDFF),
-    surfaceContainerHighest: Color(0xFF44474E),
-    onSurfaceVariant: Color(0xFFC4C7CF),
-    outline: Color(0xFF8E9099),
-    outlineVariant: Color(0xFF43474C),
-    shadow: Colors.black,
-    scrim: Color(0xB3000000),
-    inverseSurface: Color(0xFFE3E3E6),
-    onInverseSurface: Color(0xFF2F3033),
-    inversePrimary: _primaryColor,
-    surfaceTint: Color(0xFFA8C7FF),
+    primary: kCyanLight,
+    onPrimary: kNavyDeep,
+    secondary: kCyanLight,
+    onSecondary: kNavyDeep,
+    surface: const Color(0xFF0D1420),
+    onSurface: const Color(0xFFE8F4FD),
+    error: kDangerRed,
   );
 
-  return _buildTheme(colorScheme);
+  return _buildTheme(cs);
 }
 
-ThemeData _buildTheme(ColorScheme colorScheme) {
-  const radius8 = BorderRadius.all(Radius.circular(8));
-  const radius12 = BorderRadius.all(Radius.circular(12));
+ThemeData _buildTheme(ColorScheme cs) {
+  final isDark = cs.brightness == Brightness.dark;
 
-  final base = ThemeData(
+  return ThemeData(
     useMaterial3: true,
-    colorScheme: colorScheme,
-    visualDensity: VisualDensity.standard,
-  );
-
-  return base.copyWith(
+    colorScheme: cs,
+    scaffoldBackgroundColor: isDark ? const Color(0xFF0D1420) : kSurface,
+    fontFamily: GoogleFonts.plusJakartaSans().fontFamily,
     appBarTheme: AppBarTheme(
-      centerTitle: false,
       elevation: 0,
       scrolledUnderElevation: 0,
-      backgroundColor: _primaryColor,
+      centerTitle: false,
+      backgroundColor: kNavyDeep,
       foregroundColor: Colors.white,
-      titleTextStyle: GoogleFonts.poppins(
+      titleTextStyle: GoogleFonts.plusJakartaSans(
         fontSize: 20,
-        fontWeight: FontWeight.w600,
+        fontWeight: FontWeight.w800,
         color: Colors.white,
+        letterSpacing: -0.3,
       ),
       iconTheme: const IconThemeData(color: Colors.white),
-      actionsIconTheme: const IconThemeData(color: Colors.white),
     ),
-    cardTheme: const CardThemeData(
-      elevation: 1,
+    cardTheme: CardThemeData(
+      elevation: 0,
       margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(borderRadius: radius12),
-      shadowColor: Color(0x1A000000),
+      color: isDark ? const Color(0xFF131E30) : Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: isDark ? const Color(0xFF1E2D45) : kCyan.withOpacity(0.08),
+          width: 1,
+        ),
+      ),
+      shadowColor: const Color(0x1A1A237E),
+    ),
+    chipTheme: ChipThemeData(
+      backgroundColor: isDark ? const Color(0xFF1A2540) : Colors.white,
+      selectedColor: kCyan,
+      labelStyle: GoogleFonts.plusJakartaSans(
+        fontSize: 11,
+        fontWeight: FontWeight.w600,
+      ),
+      side: BorderSide(color: kCyan.withOpacity(0.25), width: 1.5),
+      shape: const StadiumBorder(),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
     ),
     filledButtonTheme: FilledButtonThemeData(
-      style: FilledButton.styleFrom(
-        minimumSize: const Size.fromHeight(48),
-        shape: const RoundedRectangleBorder(borderRadius: radius8),
-        textStyle: const TextStyle(fontWeight: FontWeight.w600),
+      style: ButtonStyle(
+        backgroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.pressed)) return kCyanDark;
+          if (states.contains(WidgetState.hovered)) return kCyanLight;
+          return kCyan;
+        }),
+        foregroundColor: WidgetStateProperty.all(Colors.white),
+        minimumSize: WidgetStateProperty.all(const Size.fromHeight(48)),
+        shape: WidgetStateProperty.all(
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        elevation: WidgetStateProperty.all(0),
+        shadowColor: WidgetStateProperty.all(kCyan.withOpacity(0.4)),
+        textStyle: WidgetStateProperty.all(
+          GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w700),
+        ),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
+        foregroundColor: kCyan,
+        side: const BorderSide(color: kCyan, width: 1.5),
         minimumSize: const Size.fromHeight(48),
-        shape: const RoundedRectangleBorder(borderRadius: radius8),
-        textStyle: const TextStyle(fontWeight: FontWeight.w600),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        textStyle: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w700),
       ),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      border: const OutlineInputBorder(
-        borderRadius: radius8,
-        borderSide: BorderSide.none,
+      fillColor: isDark ? const Color(0xFF1A2540) : kSurface,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(color: kCyan.withOpacity(0.15), width: 1.5),
       ),
-      enabledBorder: const OutlineInputBorder(
-        borderRadius: radius8,
-        borderSide: BorderSide.none,
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(color: kCyan.withOpacity(0.15), width: 1.5),
       ),
-      focusedBorder: const OutlineInputBorder(
-        borderRadius: radius8,
-        borderSide: BorderSide.none,
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: kCyan, width: 2),
       ),
-      errorBorder: const OutlineInputBorder(
-        borderRadius: radius8,
-        borderSide: BorderSide.none,
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: kDangerRed, width: 1.5),
       ),
-      focusedErrorBorder: const OutlineInputBorder(
-        borderRadius: radius8,
-        borderSide: BorderSide.none,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      hintStyle: TextStyle(
+        color: isDark ? Colors.white38 : const Color(0xFF718096),
+        fontSize: 14,
+        fontFamily: GoogleFonts.spaceGrotesk().fontFamily,
       ),
-      fillColor: colorScheme.brightness == Brightness.dark
-          ? const Color(0xFF1F1F1F)
-          : const Color(0xFFF3F5F7),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      labelStyle: GoogleFonts.plusJakartaSans(
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.04,
+        color: isDark ? kCyanLight : kNavyDeep,
+      ),
     ),
-    textTheme: base.textTheme.copyWith(
-      displayLarge: GoogleFonts.poppins(textStyle: base.textTheme.displayLarge),
-      displayMedium: GoogleFonts.poppins(textStyle: base.textTheme.displayMedium),
-      displaySmall: GoogleFonts.poppins(textStyle: base.textTheme.displaySmall),
-      headlineLarge: GoogleFonts.poppins(textStyle: base.textTheme.headlineLarge),
-      headlineMedium: GoogleFonts.poppins(textStyle: base.textTheme.headlineMedium),
-      headlineSmall: GoogleFonts.poppins(textStyle: base.textTheme.headlineSmall),
-      titleLarge: GoogleFonts.poppins(textStyle: base.textTheme.titleLarge),
-      titleMedium: GoogleFonts.poppins(textStyle: base.textTheme.titleMedium),
-      titleSmall: GoogleFonts.poppins(textStyle: base.textTheme.titleSmall),
+    textTheme: GoogleFonts.plusJakartaSansTextTheme().copyWith(
+      bodyMedium: GoogleFonts.spaceGrotesk(
+        color: isDark ? const Color(0xFFE8F4FD) : const Color(0xFF4A5568),
+      ),
+      bodySmall: GoogleFonts.spaceGrotesk(
+        color: isDark ? Colors.white54 : const Color(0xFF718096),
+      ),
     ),
+    dividerTheme: DividerThemeData(
+      color: isDark ? Colors.white10 : kSurface,
+      thickness: 1,
+    ),
+    extensions: const [AlMobarmgColors()],
   );
 }
 
-final ThemeData appLightTheme = lightTheme();
-final ThemeData appDarkTheme = darkTheme();
+class AlMobarmgColors extends ThemeExtension<AlMobarmgColors> {
+  const AlMobarmgColors();
+
+  Color get scoreColorSafe => kSafeGreen;
+  Color get scoreColorLow => kCyan;
+  Color get scoreColorCaution => kCautionAmb;
+  Color get scoreColorDanger => kDangerRed;
+  LinearGradient get brandGradient => kBrandGradient;
+
+  @override
+  AlMobarmgColors copyWith() => const AlMobarmgColors();
+
+  @override
+  AlMobarmgColors lerp(covariant ThemeExtension<AlMobarmgColors>? other, double t) => this;
+}
+
+Color scoreColor(int score) {
+  if (score >= 85) return kSafeGreen;
+  if (score >= 65) return kCyan;
+  if (score >= 45) return kCautionAmb;
+  return kDangerRed;
+}
+
+String scoreLabel(int score) {
+  if (score >= 85) return 'SAFE';
+  if (score >= 65) return 'LOW RISK';
+  if (score >= 45) return 'CAUTION';
+  if (score >= 25) return 'RISKY';
+  return 'DANGEROUS';
+}
+
+class GradientAppBar extends StatelessWidget implements PreferredSizeWidget {
+  const GradientAppBar({
+    super.key,
+    required this.title,
+    this.subtitle,
+    this.actions,
+    this.leading,
+    this.centerTitle = false,
+    this.height = kToolbarHeight + 4,
+  });
+
+  final String title;
+  final String? subtitle;
+  final List<Widget>? actions;
+  final Widget? leading;
+  final bool centerTitle;
+  final double height;
+
+  @override
+  Size get preferredSize => Size.fromHeight(height);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: kBrandGradient,
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x331A237E),
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Row(
+            children: [
+              if (leading != null) ...[leading!, const SizedBox(width: 8)],
+              Expanded(
+                child: centerTitle ? Center(child: _titleColumn()) : _titleColumn(),
+              ),
+              if (actions != null) ...actions!,
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _titleColumn() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          title,
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
+            color: Colors.white,
+            letterSpacing: -0.3,
+          ),
+        ),
+        if (subtitle != null)
+          Text(
+            subtitle!,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 11,
+              color: Colors.white70,
+            ),
+          ),
+      ],
+    );
+  }
+}
