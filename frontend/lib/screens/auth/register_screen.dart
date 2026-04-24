@@ -29,8 +29,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   void initState() {
     super.initState();
     final initialRole = widget.initialRole;
-    if (initialRole == 'developer' || initialRole == 'user') {
-      _selectedRole = initialRole!;
+    if (initialRole != null &&
+        (initialRole == 'developer' || initialRole == 'user')) {
+      _selectedRole = initialRole;
     }
   }
 
@@ -106,7 +107,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
-                      value: _selectedRole,
+                      initialValue: _selectedRole,
                       decoration: const InputDecoration(
                         labelText: 'Account type',
                         border: OutlineInputBorder(),
