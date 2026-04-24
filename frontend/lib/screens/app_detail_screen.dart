@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../constants.dart';
-import '../services/api_service.dart';
 import '../services/install_service.dart';
 import '../widgets/security_badge.dart';
 import 'home_screen.dart';
