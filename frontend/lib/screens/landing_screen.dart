@@ -107,10 +107,10 @@ class LandingScreen extends StatelessWidget {
                         icon: const Icon(Icons.person_add_alt_rounded),
                         label: const Text('Create User Account'),
                       ),
-                      IconButton.filledTonal(
-                        tooltip: 'Open AlMobarmg App Store login',
+                      OutlinedButton.icon(
                         onPressed: () => context.go('/login'),
                         icon: const Icon(Icons.storefront_rounded),
+                        label: const Text('Open App Store Login'),
                       ),
                     ],
                   ),

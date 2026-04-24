@@ -30,7 +30,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     super.initState();
     final initialRole = widget.initialRole;
     if (initialRole == 'developer' || initialRole == 'user') {
-      _selectedRole = initialRole!;
+      _selectedRole = initialRole;
     }
   }
 
