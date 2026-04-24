@@ -2,19 +2,17 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:shimmer/shimmer.dart';
 
 import '../services/api_service.dart';
+import '../theme.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/error_state.dart';
 import '../widgets/platform_chips.dart';
-import '../widgets/security_badge.dart';
 
 final apiServiceProvider = Provider<ApiService>((_) => ApiService());
-
-final appFeedProvider = AsyncNotifierProvider<AppFeedNotifier, AppFeedState>(
-  AppFeedNotifier.new,
-);
+final appFeedProvider = AsyncNotifierProvider<AppFeedNotifier, AppFeedState>(AppFeedNotifier.new);
 
 class AppFeedState {
   const AppFeedState({
@@ -58,13 +56,10 @@ class AppFeedState {
 
 class AppFeedNotifier extends AsyncNotifier<AppFeedState> {
   @override
-  Future<AppFeedState> build() async {
-    return _loadFresh();
-  }
+  Future<AppFeedState> build() => _loadFresh();
 
   Future<AppFeedState> _loadFresh() async {
-    final api = ref.read(apiServiceProvider);
-    final apps = await api.getApps(page: 1);
+    final apps = await ref.read(apiServiceProvider).getApps(page: 1);
     return AppFeedState(apps: apps, hasMore: apps.length >= 20);
   }
 
@@ -77,12 +72,11 @@ class AppFeedNotifier extends AsyncNotifier<AppFeedState> {
     final current = state.valueOrNull ?? const AppFeedState();
     state = AsyncData(current.copyWith(loadingMore: true));
     try {
-      final api = ref.read(apiServiceProvider);
-      final apps = await api.getApps(
-        query: query ?? current.query,
-        platform: platform ?? current.platform,
-        category: category ?? current.category,
-      );
+      final apps = await ref.read(apiServiceProvider).getApps(
+            query: query ?? current.query,
+            platform: platform ?? current.platform,
+            category: category ?? current.category,
+          );
       state = AsyncData(
         current.copyWith(
           apps: apps,
@@ -101,27 +95,22 @@ class AppFeedNotifier extends AsyncNotifier<AppFeedState> {
 
   Future<void> loadMore() async {
     final current = state.valueOrNull;
-    if (current == null || current.loadingMore || !current.hasMore) {
-      return;
-    }
-
+    if (current == null || current.loadingMore || !current.hasMore) return;
     state = AsyncData(current.copyWith(loadingMore: true));
-    final api = ref.read(apiServiceProvider);
-    final nextPage = current.page + 1;
-
     try {
-      final next = await api.getApps(
-        page: nextPage,
-        query: current.query,
-        platform: current.platform,
-        category: current.category,
-      );
+      final nextPage = current.page + 1;
+      final next = await ref.read(apiServiceProvider).getApps(
+            page: nextPage,
+            query: current.query,
+            platform: current.platform,
+            category: current.category,
+          );
       state = AsyncData(
         current.copyWith(
           apps: [...current.apps, ...next],
           page: nextPage,
-          loadingMore: false,
           hasMore: next.isNotEmpty,
+          loadingMore: false,
         ),
       );
     } catch (e, st) {
@@ -144,31 +133,33 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _scrollController.addListener(_onScroll);
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 260) {
+        ref.read(appFeedProvider.notifier).loadMore();
+      }
+    });
   }
 
   @override
   void dispose() {
-    _scrollController.removeListener(_onScroll);
     _searchController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
 
-  void _onScroll() {
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 300) {
-      ref.read(appFeedProvider.notifier).loadMore();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final feed = ref.watch(appFeedProvider);
-
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Al Mobarmg Store'),
+      appBar: GradientAppBar(
+        title: 'Al Mobarmg',
+        subtitle: 'Secure Apps · Every Platform',
+        actions: [
+          IconButton(
+            onPressed: () {},
+            icon: const Icon(Icons.notifications_none_rounded, color: Colors.white),
+          ),
+        ],
       ),
       body: feed.when(
         loading: _buildLoading,
@@ -181,24 +172,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           child: CustomScrollView(
             controller: _scrollController,
             slivers: [
-              SliverToBoxAdapter(child: _filters(context, data)),
+              SliverToBoxAdapter(child: _filters(data)),
               if (data.apps.isEmpty)
                 const SliverFillRemaining(
                   hasScrollBody: false,
                   child: EmptyState(
                     icon: Icons.search_off_rounded,
                     title: 'No apps found',
-                    subtitle: 'Try adjusting your filters or search term.',
+                    subtitle: 'Try adjusting your filters.',
                   ),
                 )
-              else ...[
+              else
                 SliverPadding(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(14),
                   sliver: SliverGrid(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) => _appCard(context, data.apps[index]),
-                      childCount: data.apps.length,
-                    ),
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: MediaQuery.of(context).size.width >= 1100
                           ? 4
@@ -207,19 +194,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               : 2,
                       mainAxisSpacing: 12,
                       crossAxisSpacing: 12,
-                      childAspectRatio: 0.68,
+                      childAspectRatio: 0.69,
+                    ),
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) => _appCard(data.apps[index]),
+                      childCount: data.apps.length,
                     ),
                   ),
                 ),
-                SliverToBoxAdapter(
-                  child: data.loadingMore
-                      ? const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 16),
-                          child: Center(child: CircularProgressIndicator()),
-                        )
-                      : const SizedBox.shrink(),
-                ),
-              ],
+              SliverToBoxAdapter(
+                child: data.loadingMore
+                    ? const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Center(child: CircularProgressIndicator()),
+                      )
+                    : const SizedBox.shrink(),
+              ),
             ],
           ),
         ),
@@ -227,20 +217,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _filters(BuildContext context, AppFeedState state) {
+  Widget _filters(AppFeedState state) {
     const platforms = ['all', 'android', 'ios', 'windows', 'mac', 'linux'];
-    const platformLabels = {
-      'all': 'ALL',
-      'android': 'ANDROID',
-      'ios': 'IPHONE',
-      'windows': 'WINDOWS',
-      'mac': 'MAC',
-      'linux': 'LINUX',
-    };
     const categories = ['all', 'games', 'tools', 'business', 'education', 'health'];
 
     return Padding(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 2),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -248,34 +230,38 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             controller: _searchController,
             textInputAction: TextInputAction.search,
             decoration: InputDecoration(
-              hintText: 'Search apps',
+              hintText: 'Search secure apps...',
               prefixIcon: const Icon(Icons.search_rounded),
-              suffixIcon: IconButton(
-                icon: const Icon(Icons.tune_rounded),
-                tooltip: 'Apply filters',
-                onPressed: () {
-                  ref.read(appFeedProvider.notifier).updateFilters(
-                        query: _searchController.text,
-                      );
-                },
+              fillColor: kSurface,
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: kCyan.withOpacity(0.15), width: 1.5),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: kCyan, width: 2),
               ),
             ),
-            onSubmitted: (value) {
-              ref.read(appFeedProvider.notifier).updateFilters(query: value);
-            },
+            onSubmitted: (value) => ref.read(appFeedProvider.notifier).updateFilters(query: value),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: platforms
                 .map(
-                  (platform) => FilterChip(
-                    label: Text(platformLabels[platform] ?? platform.toUpperCase()),
-                    selected: state.platform == platform,
-                    onSelected: (_) {
-                      ref.read(appFeedProvider.notifier).updateFilters(platform: platform);
-                    },
+                  (p) => FilterChip(
+                    label: Text(p.toUpperCase(), style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700)),
+                    selected: state.platform == p,
+                    selectedColor: kCyan,
+                    checkmarkColor: Colors.white,
+                    side: BorderSide(color: kCyan.withOpacity(0.25), width: 1.5),
+                    backgroundColor: Colors.white,
+                    labelStyle: GoogleFonts.plusJakartaSans(
+                      color: state.platform == p ? Colors.white : kNavyDeep,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    onSelected: (_) => ref.read(appFeedProvider.notifier).updateFilters(platform: p),
                   ),
                 )
                 .toList(),
@@ -286,12 +272,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             runSpacing: 8,
             children: categories
                 .map(
-                  (category) => FilterChip(
-                    label: Text(category.toUpperCase()),
-                    selected: state.category == category,
-                    onSelected: (_) {
-                      ref.read(appFeedProvider.notifier).updateFilters(category: category);
-                    },
+                  (c) => FilterChip(
+                    label: Text(c.toUpperCase(), style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700)),
+                    selected: state.category == c,
+                    selectedColor: kCyan,
+                    checkmarkColor: Colors.white,
+                    backgroundColor: Colors.white,
+                    side: BorderSide(color: kCyan.withOpacity(0.25), width: 1.5),
+                    labelStyle: GoogleFonts.plusJakartaSans(
+                      color: state.category == c ? Colors.white : kNavyDeep,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    onSelected: (_) => ref.read(appFeedProvider.notifier).updateFilters(category: c),
                   ),
                 )
                 .toList(),
@@ -301,89 +293,132 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _appCard(BuildContext context, Map<String, dynamic> app) {
+  Widget _appCard(Map<String, dynamic> app) {
     final score = (app['security_score'] as num?)?.toInt() ?? 0;
-    final appPlatforms = List<String>.from(app['supported_platforms'] ?? const <String>[]);
-    final riskBadge = app['risk_badge']?.toString() ?? 'unknown';
+    final platforms = List<String>.from(app['supported_platforms'] ?? const []);
 
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () => context.push('/apps/${app['id']}'),
-        child: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Center(
-                  child: CachedNetworkImage(
-                    imageUrl: app['icon_url'] ?? '',
-                    fit: BoxFit.contain,
-                    errorWidget: (_, __, ___) => const Icon(Icons.apps_rounded, size: 60),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: kCyan.withOpacity(0.08)),
+        boxShadow: const [BoxShadow(color: Color(0x141A237E), blurRadius: 22, offset: Offset(0, 8))],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => context.push('/apps/${app['id']}'),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Center(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: CachedNetworkImage(
+                        imageUrl: app['icon_url']?.toString() ?? '',
+                        width: 72,
+                        height: 72,
+                        fit: BoxFit.cover,
+                        errorWidget: (_, __, ___) => Container(
+                          width: 72,
+                          height: 72,
+                          decoration: const BoxDecoration(
+                            gradient: kBrandGradient,
+                            borderRadius: BorderRadius.all(Radius.circular(16)),
+                          ),
+                          child: const Icon(Icons.apps_rounded, color: Colors.white, size: 34),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
-              ),
-              Text(
-                app['name'] ?? '-',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 2),
-              Text(
-                app['category']?.toString() ?? '',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              const SizedBox(height: 6),
-              SecurityBadge(
-                score: score,
-                aiHint: 'Risk level: $riskBadge',
-              ),
-              if (score >= 85) ...[
-                const SizedBox(height: 6),
+                Text(
+                  app['name']?.toString() ?? '-',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.plusJakartaSans(fontSize: 14, color: kNavyDeep, fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  app['category']?.toString() ?? '',
+                  style: GoogleFonts.spaceGrotesk(color: const Color(0xFF6B7280), fontSize: 12),
+                ),
+                const SizedBox(height: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .secondary
-                        .withValues(alpha: 0.14),
-                    borderRadius: BorderRadius.circular(999),
+                    color: scoreColor(score).withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(100),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.verified_rounded,
-                        size: 14,
-                        color: Theme.of(context).colorScheme.secondary,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Verified',
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: Theme.of(context).colorScheme.secondary,
+                  child: Text(
+                    '${scoreLabel(score)} · $score',
+                    style: GoogleFonts.plusJakartaSans(
+                      color: scoreColor(score),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                if (score >= 85) ...[
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: kSafeGreen.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(100),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.verified_rounded, size: 13, color: kSafeGreen),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Verified',
+                          style: GoogleFonts.plusJakartaSans(
+                            color: kSafeGreen,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 6),
+                PlatformChips(platforms: platforms, compact: true),
+                const Spacer(),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: kBrandGradient,
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: [BoxShadow(color: kCyan.withOpacity(0.25), blurRadius: 12, offset: const Offset(0, 4))],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(8),
+                      onTap: () => context.push('/apps/${app['id']}'),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 11),
+                        child: Center(
+                          child: Text(
+                            'Install',
+                            style: GoogleFonts.plusJakartaSans(
+                              color: Colors.white,
                               fontWeight: FontWeight.w700,
                             ),
+                          ),
+                        ),
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ],
-              const SizedBox(height: 6),
-              PlatformChips(platforms: appPlatforms, compact: true),
-              const Spacer(),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: () => context.push('/apps/${app['id']}'),
-                  child: const Text('Install'),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -392,13 +427,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Widget _buildLoading() {
     return GridView.builder(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       itemCount: 8,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
-        childAspectRatio: 0.68,
+        childAspectRatio: 0.69,
       ),
       itemBuilder: (_, __) => const SkeletonAppCard(),
     );
@@ -410,44 +445,34 @@ class SkeletonAppCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Card(
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [BoxShadow(color: Color(0x141A237E), blurRadius: 22, offset: Offset(0, 8))],
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.all(12),
         child: Shimmer.fromColors(
-          baseColor: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE0E0E0),
-          highlightColor: isDark ? const Color(0xFF3A3A3A) : const Color(0xFFF2F2F2),
+          baseColor: const Color(0xFFEAF3FF),
+          highlightColor: const Color(0xFFF7FBFF),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: Container(
                   width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
                 ),
               ),
               const SizedBox(height: 10),
-              Container(height: 14, width: double.infinity, color: Colors.white),
+              Container(height: 14, width: 120, color: Colors.white),
               const SizedBox(height: 8),
-              Container(height: 12, width: 110, color: Colors.white),
+              Container(height: 12, width: 90, color: Colors.white),
               const SizedBox(height: 8),
-              Container(height: 20, width: double.infinity, color: Colors.white),
-              const SizedBox(height: 6),
-              Row(
-                children: List.generate(
-                  3,
-                  (_) => Padding(
-                    padding: const EdgeInsets.only(right: 6),
-                    child: Container(height: 24, width: 24, color: Colors.white),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
-              Container(height: 48, width: double.infinity, color: Colors.white),
+              Container(height: 20, width: 80, color: Colors.white),
+              const SizedBox(height: 8),
+              Container(height: 34, width: double.infinity, color: Colors.white),
             ],
           ),
         ),

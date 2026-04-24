@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
+
+import '../theme.dart';
 
 enum SecurityBadgeSize { compact, large }
 
-class SecurityBadge extends StatefulWidget {
+class SecurityBadge extends StatelessWidget {
   const SecurityBadge({
     super.key,
     required this.score,
@@ -16,63 +19,53 @@ class SecurityBadge extends StatefulWidget {
   final SecurityBadgeSize size;
 
   @override
-  State<SecurityBadge> createState() => _SecurityBadgeState();
-}
-
-class _SecurityBadgeState extends State<SecurityBadge> {
-  @override
   Widget build(BuildContext context) {
-    final isLarge = widget.size == SecurityBadgeSize.large;
-    final radius = isLarge ? 50.0 : 28.0;
+    final isLarge = size == SecurityBadgeSize.large;
+    final color = scoreColor(score);
+    final radius = isLarge ? 52.0 : 30.0;
     final lineWidth = isLarge ? 10.0 : 6.0;
 
     return Tooltip(
-      message: widget.aiHint,
+      message: aiHint,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          CircularPercentIndicator(
-            radius: radius,
-            lineWidth: lineWidth,
-            percent: (widget.score.clamp(0, 100) / 100),
-            animation: true,
-            animationDuration: 900,
-            progressColor: _scoreColor(widget.score),
-            center: Text(
-              '${widget.score}',
-              style: TextStyle(
-                fontSize: isLarge ? 28 : 14,
-                fontWeight: FontWeight.bold,
+          Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: color.withOpacity(0.08),
+              boxShadow: [BoxShadow(color: color.withOpacity(0.3), blurRadius: 20, spreadRadius: 1)],
+            ),
+            padding: const EdgeInsets.all(4),
+            child: CircularPercentIndicator(
+              radius: radius,
+              lineWidth: lineWidth,
+              percent: score.clamp(0, 100) / 100,
+              animation: true,
+              animationDuration: 900,
+              progressColor: color,
+              backgroundColor: color.withOpacity(0.12),
+              center: Text(
+                '$score',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: isLarge ? 28 : 14,
+                  fontWeight: FontWeight.w800,
+                  color: color,
+                ),
               ),
             ),
           ),
           const SizedBox(height: 6),
           Text(
-            _riskLabel(widget.score),
-            style: TextStyle(
+            scoreLabel(score),
+            style: GoogleFonts.plusJakartaSans(
               fontSize: isLarge ? 14 : 11,
-              color: _scoreColor(widget.score),
-              fontWeight: FontWeight.w700,
+              color: color,
+              fontWeight: FontWeight.w800,
             ),
           ),
         ],
       ),
     );
-  }
-
-  String _riskLabel(int score) {
-    if (score >= 85) return 'SAFE';
-    if (score >= 65) return 'LOW RISK';
-    if (score >= 45) return 'CAUTION';
-    if (score >= 25) return 'RISKY';
-    return 'DANGEROUS';
-  }
-
-  Color _scoreColor(int score) {
-    if (score >= 85) return Colors.green;
-    if (score >= 65) return Colors.blue;
-    if (score >= 45) return Colors.amber.shade700;
-    if (score >= 25) return Colors.red;
-    return Colors.red.shade900;
   }
 }

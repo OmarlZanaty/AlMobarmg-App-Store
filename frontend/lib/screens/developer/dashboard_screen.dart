@@ -2,14 +2,14 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:shimmer/shimmer.dart';
 
 import '../../main.dart';
 import '../../providers.dart';
-import '../../widgets/security_badge.dart';
+import '../../theme.dart';
 
-final developerAppsProvider =
-    AsyncNotifierProvider<DeveloperAppsNotifier, List<Map<String, dynamic>>>(
+final developerAppsProvider = AsyncNotifierProvider<DeveloperAppsNotifier, List<Map<String, dynamic>>>(
   DeveloperAppsNotifier.new,
 );
 
@@ -17,9 +17,7 @@ class DeveloperAppsNotifier extends AsyncNotifier<List<Map<String, dynamic>>> {
   @override
   Future<List<Map<String, dynamic>>> build() => _fetch();
 
-  Future<List<Map<String, dynamic>>> _fetch() {
-    return ref.read(apiServiceProvider).getDeveloperApps();
-  }
+  Future<List<Map<String, dynamic>>> _fetch() => ref.read(apiServiceProvider).getDeveloperApps();
 
   Future<void> refresh() async {
     state = const AsyncLoading();
@@ -36,30 +34,24 @@ class DeveloperDashboardScreen extends ConsumerStatefulWidget {
 
 class _DeveloperDashboardScreenState extends ConsumerState<DeveloperDashboardScreen>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _pulseController;
+  late final AnimationController _pulse;
 
   @override
   void initState() {
     super.initState();
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    )..repeat(reverse: true);
+    _pulse = AnimationController(vsync: this, duration: const Duration(milliseconds: 1100))..repeat(reverse: true);
   }
 
   @override
   void dispose() {
-    _pulseController.dispose();
+    _pulse.dispose();
     super.dispose();
   }
 
   Future<void> _logout() async {
     try {
       await ref.read(apiServiceProvider).logout();
-    } catch (_) {
-      // Ignore remote logout errors and clear local session anyway.
-    }
-
+    } catch (_) {}
     if (!mounted) return;
     await ref.read(authStateProvider.notifier).clearSession();
     if (!mounted) return;
@@ -69,241 +61,145 @@ class _DeveloperDashboardScreenState extends ConsumerState<DeveloperDashboardScr
   @override
   Widget build(BuildContext context) {
     final appsState = ref.watch(developerAppsProvider);
+    final name = ref.watch(authStateProvider).valueOrNull?.user?['name']?.toString() ?? 'Developer';
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Apps'),
-        actions: [
-          IconButton(
-            onPressed: _logout,
-            tooltip: 'Logout',
-            icon: const Icon(Icons.logout),
-          ),
-        ],
+      appBar: GradientAppBar(
+        title: 'Developer Dashboard',
+        subtitle: name,
+        actions: [IconButton(onPressed: _logout, icon: const Icon(Icons.logout_rounded, color: Colors.white))],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/developer/upload'),
-        icon: const Icon(Icons.upload_file),
-        label: const Text('Upload New App'),
+      floatingActionButton: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: kBrandGradient,
+          borderRadius: BorderRadius.circular(100),
+          boxShadow: [BoxShadow(color: kCyan.withOpacity(0.3), blurRadius: 16, offset: const Offset(0, 6))],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(100),
+            onTap: () => context.push('/developer/upload'),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.add_rounded, color: Colors.white), SizedBox(width: 6), Text('Upload', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700))]),
+            ),
+          ),
+        ),
       ),
       body: appsState.when(
-        loading: _DashboardShimmer.new,
-        error: (error, _) => _ErrorState(
-          message: error.toString().replaceFirst('Exception: ', ''),
-          onRetry: () => ref.read(developerAppsProvider.notifier).refresh(),
-        ),
+        loading: () => const _DashboardShimmer(),
+        error: (e, _) => Center(child: Text(e.toString())),
         data: (apps) {
-          if (apps.isEmpty) {
-            return _EmptyState(onUpload: () => context.push('/developer/upload'));
-          }
-
+          final live = apps.where((a) => a['status']?.toString().toLowerCase() == 'approved').length;
+          final scanning = apps.where((a) => a['status']?.toString().toLowerCase() == 'scanning').length;
           return RefreshIndicator(
             onRefresh: () => ref.read(developerAppsProvider.notifier).refresh(),
-            child: ListView.separated(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
-              itemCount: apps.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 10),
-              itemBuilder: (_, index) => _DeveloperAppCard(
-                app: apps[index],
-                pulseController: _pulseController,
-              ),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(14, 14, 14, 96),
+              children: [
+                Row(
+                  children: [
+                    Expanded(child: _statCard('Total Apps', apps.length, kNavyDeep)),
+                    const SizedBox(width: 10),
+                    Expanded(child: _statCard('Live', live, kSafeGreen)),
+                    const SizedBox(width: 10),
+                    Expanded(child: _statCard('Scanning', scanning, kCyanDark)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                ...apps.map((app) => _appCard(app)).toList(),
+              ],
             ),
           );
         },
       ),
     );
   }
-}
 
-class _DeveloperAppCard extends StatelessWidget {
-  const _DeveloperAppCard({
-    required this.app,
-    required this.pulseController,
-  });
-
-  final Map<String, dynamic> app;
-  final AnimationController pulseController;
-
-  @override
-  Widget build(BuildContext context) {
-    final iconUrl = app['icon_url']?.toString() ?? '';
-    final appName = app['name']?.toString() ?? 'Unknown app';
-    final version = app['version']?.toString() ?? '—';
-    final status = app['status']?.toString().toLowerCase() ?? 'pending';
-    final score = (app['security_score'] as num?)?.toInt() ?? 0;
-    final installs = (app['total_installs'] as num?)?.toInt() ?? 0;
-    final platforms = (app['supported_platforms'] as List? ?? app['platforms'] as List? ?? const [])
-        .map((e) => e.toString())
-        .toList();
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: CachedNetworkImage(
-                    imageUrl: iconUrl,
-                    width: 52,
-                    height: 52,
-                    fit: BoxFit.cover,
-                    errorWidget: (_, __, ___) => Container(
-                      width: 52,
-                      height: 52,
-                      color: Colors.grey.shade200,
-                      child: const Icon(Icons.apps, size: 28),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        appName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 3),
-                      Text('Version $version', style: Theme.of(context).textTheme.bodySmall),
-                    ],
-                  ),
-                ),
-                SecurityBadge(
-                  score: score,
-                  aiHint: app['security_summary']?.toString() ?? 'Security scan in progress',
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            _StatusChip(status: status, pulseController: pulseController),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: platforms
-                  .map(
-                    (platform) => Chip(
-                      visualDensity: VisualDensity.compact,
-                      avatar: Icon(_platformIcon(platform), size: 16),
-                      label: Text(platform.toUpperCase()),
-                    ),
-                  )
-                  .toList(),
-            ),
-            const SizedBox(height: 8),
-            Text('Installs: $installs'),
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton.icon(
-                onPressed: () => context.push('/apps/${app['id']}'),
-                icon: const Icon(Icons.open_in_new),
-                label: const Text('View Details'),
-              ),
-            ),
-          ],
-        ),
+  Widget _statCard(String title, int value, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [BoxShadow(color: Color(0x1A1A237E), blurRadius: 18, offset: Offset(0, 8))],
+      ),
+      child: Column(
+        children: [
+          Text(title, style: GoogleFonts.spaceGrotesk(color: const Color(0xFF6B7280), fontSize: 12)),
+          const SizedBox(height: 6),
+          Text('$value', style: GoogleFonts.plusJakartaSans(color: color, fontSize: 22, fontWeight: FontWeight.w800)),
+        ],
       ),
     );
   }
 
-  IconData _platformIcon(String platform) {
-    switch (platform.toLowerCase()) {
-      case 'android':
-        return Icons.android;
-      case 'ios':
-      case 'iphone':
-        return Icons.phone_iphone;
-      case 'windows':
-        return Icons.window;
-      case 'mac':
-      case 'macos':
-        return Icons.laptop_mac;
-      case 'linux':
-        return Icons.computer;
-      default:
-        return Icons.devices;
-    }
-  }
-}
+  Widget _appCard(Map<String, dynamic> app) {
+    final status = app['status']?.toString().toLowerCase() ?? 'review';
+    final color = status == 'approved'
+        ? kSafeGreen
+        : status == 'scanning'
+            ? kCyan
+            : status == 'review'
+                ? kCautionAmb
+                : kDangerRed;
 
-class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.status, required this.pulseController});
+    Widget statusChip = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(color: color.withOpacity(0.14), borderRadius: BorderRadius.circular(100)),
+      child: Text(status.toUpperCase(), style: GoogleFonts.plusJakartaSans(color: color, fontSize: 11, fontWeight: FontWeight.w800)),
+    );
 
-  final String status;
-  final AnimationController pulseController;
-
-  @override
-  Widget build(BuildContext context) {
-    final cfg = _statusConfig(status);
     if (status == 'scanning') {
-      return FadeTransition(
-        opacity: Tween<double>(begin: 0.45, end: 1).animate(pulseController),
-        child: Chip(
-          visualDensity: VisualDensity.compact,
-          backgroundColor: cfg.background,
-          avatar: Icon(Icons.sync, color: cfg.foreground, size: 16),
-          label: Text(cfg.label, style: TextStyle(color: cfg.foreground, fontWeight: FontWeight.w600)),
-        ),
+      statusChip = FadeTransition(
+        opacity: Tween<double>(begin: 0.4, end: 1).animate(_pulse),
+        child: statusChip,
       );
     }
 
-    return Chip(
-      visualDensity: VisualDensity.compact,
-      backgroundColor: cfg.background,
-      avatar: Icon(Icons.circle, color: cfg.foreground, size: 10),
-      label: Text(cfg.label, style: TextStyle(color: cfg.foreground, fontWeight: FontWeight.w600)),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [BoxShadow(color: Color(0x1A1A237E), blurRadius: 18, offset: Offset(0, 8))],
+      ),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: CachedNetworkImage(
+              imageUrl: app['icon_url']?.toString() ?? '',
+              width: 56,
+              height: 56,
+              fit: BoxFit.cover,
+              errorWidget: (_, __, ___) => Container(
+                width: 56,
+                height: 56,
+                decoration: const BoxDecoration(gradient: kBrandGradient),
+                child: const Icon(Icons.apps_rounded, color: Colors.white),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(app['name']?.toString() ?? '-', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, color: kNavyDeep)),
+                const SizedBox(height: 2),
+                Text('Version ${app['version']?.toString() ?? '-'}', style: GoogleFonts.spaceGrotesk(fontSize: 12)),
+                const SizedBox(height: 8),
+                statusChip,
+              ],
+            ),
+          ),
+          IconButton(onPressed: () => context.push('/apps/${app['id']}'), icon: const Icon(Icons.open_in_new_rounded, color: kCyanDark)),
+        ],
+      ),
     );
-  }
-
-  ({String label, Color background, Color foreground}) _statusConfig(String status) {
-    switch (status) {
-      case 'pending':
-        return (
-          label: 'Pending',
-          background: Colors.grey.shade200,
-          foreground: Colors.grey.shade800,
-        );
-      case 'scanning':
-        return (
-          label: 'Scanning',
-          background: Colors.blue.shade100,
-          foreground: Colors.blue.shade800,
-        );
-      case 'review':
-        return (
-          label: 'Review',
-          background: Colors.amber.shade100,
-          foreground: Colors.amber.shade900,
-        );
-      case 'approved':
-        return (
-          label: 'Approved',
-          background: Colors.green.shade100,
-          foreground: Colors.green.shade800,
-        );
-      case 'rejected':
-        return (
-          label: 'Rejected',
-          background: Colors.red.shade100,
-          foreground: Colors.red.shade700,
-        );
-      case 'removed':
-      default:
-        return (
-          label: 'Removed',
-          background: Colors.grey.shade300,
-          foreground: Colors.grey.shade800,
-        );
-    }
   }
 }
 
@@ -313,86 +209,14 @@ class _DashboardShimmer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       itemCount: 5,
       itemBuilder: (_, __) => Padding(
-        padding: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.only(bottom: 10),
         child: Shimmer.fromColors(
-          baseColor: Colors.grey.shade300,
-          highlightColor: Colors.grey.shade100,
-          child: Container(
-            height: 140,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.onUpload});
-
-  final VoidCallback onUpload;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.rocket_launch, size: 72, color: Colors.blueGrey.shade300),
-            const SizedBox(height: 12),
-            Text('No apps yet', style: Theme.of(context).textTheme.headlineSmall),
-            const SizedBox(height: 6),
-            const Text(
-              'Upload your first app and kick off automated security scanning.',
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: onUpload,
-              icon: const Icon(Icons.upload),
-              label: const Text('Upload your first app'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.error_outline, size: 58, color: Colors.redAccent),
-            const SizedBox(height: 8),
-            Text('Could not load apps', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 8),
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 14),
-            OutlinedButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
-            ),
-          ],
+          baseColor: const Color(0xFFEAF3FF),
+          highlightColor: const Color(0xFFF7FBFF),
+          child: Container(height: 86, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16))),
         ),
       ),
     );
