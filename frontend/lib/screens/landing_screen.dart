@@ -26,7 +26,7 @@ class LandingScreen extends StatelessWidget {
                     style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 12),
-                  Wrap(
+                  const Wrap(
                     spacing: 12,
                     runSpacing: 12,
                     children: const [
@@ -179,7 +179,7 @@ class _HeroSection extends StatelessWidget {
       child: isWide
           ? Row(
               children: [
-                Expanded(child: textSection),
+                const Expanded(child: textSection),
                 const SizedBox(width: 18),
                 badge,
               ],
