@@ -17,6 +17,7 @@ import 'screens/developer/upload_screen.dart';
 import 'screens/fix_rejection_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/install_guide_screen.dart';
+import 'screens/landing_screen.dart';
 import 'screens/security_report_screen.dart';
 
 void main() {
@@ -72,9 +73,14 @@ final goRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/',
     routes: [
-      GoRoute(path: '/', builder: (context, state) => const SplashGate()),
+      GoRoute(path: '/', builder: (_, __) => const LandingScreen()),
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
-      GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
+      GoRoute(
+        path: '/register',
+        builder: (context, state) => RegisterScreen(
+          initialRole: state.uri.queryParameters['role'],
+        ),
+      ),
       GoRoute(
         path: '/verify-email',
         builder: (context, state) =>
@@ -166,36 +172,6 @@ class AlMobarmgStoreApp extends ConsumerWidget {
           child: child ?? const SizedBox.shrink(),
         );
       },
-    );
-  }
-}
-
-class SplashGate extends ConsumerWidget {
-  const SplashGate({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final auth = ref.watch(authStateProvider);
-
-    if (auth.loading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!context.mounted) return;
-      if (!auth.isAuthenticated) {
-        context.go('/login');
-      } else if (auth.role == 'admin') {
-        context.go('/admin/queue');
-      } else if (auth.role == 'developer') {
-        context.go('/developer/dashboard');
-      } else {
-        context.go('/home');
-      }
-    });
-
-    return const Scaffold(
-      body: Center(child: Text('Launching Al Mobarmg Store...')),
     );
   }
 }

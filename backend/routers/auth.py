@@ -34,6 +34,7 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8)
     name: str = Field(min_length=1)
+    role: UserRole = UserRole.user
 
 
 class LoginRequest(BaseModel):
@@ -126,7 +127,7 @@ async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db))
         email=email,
         name=payload.name.strip(),
         password_hash=await hash_password(payload.password),
-        role=UserRole.developer,
+        role=payload.role,
         is_email_verified=True,
     )
     db.add(new_user)
