@@ -88,11 +88,15 @@ class InstallService {
   Future<void> _installAndroid(BuildContext context, String? url) async {
     if (url == null || url.isEmpty) throw Exception('Missing Android signed URL');
 
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    if (messenger == null) {
+      throw Exception('Could not show install progress');
+    }
+
     final dir = await getTemporaryDirectory();
     final tempPath = '${dir.path}/al_mobarmg_${DateTime.now().millisecondsSinceEpoch}.apk';
 
     final progressNotifier = ValueNotifier<double>(0);
-    final messenger = ScaffoldMessenger.of(context);
 
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(
