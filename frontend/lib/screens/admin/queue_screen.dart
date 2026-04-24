@@ -2,11 +2,12 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:shimmer/shimmer.dart';
 
 import '../../main.dart';
 import '../../providers.dart';
-import '../../widgets/security_badge.dart';
+import '../../theme.dart';
 
 class AdminQueueScreen extends ConsumerStatefulWidget {
   const AdminQueueScreen({super.key});
@@ -16,9 +17,7 @@ class AdminQueueScreen extends ConsumerStatefulWidget {
 }
 
 class _AdminQueueScreenState extends ConsumerState<AdminQueueScreen> {
-  GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
-  final ScrollController _scrollController = ScrollController();
-
+  final _scrollController = ScrollController();
   final List<Map<String, dynamic>> _items = [];
   bool _initialLoading = true;
   bool _loadingMore = false;
@@ -31,8 +30,7 @@ class _AdminQueueScreenState extends ConsumerState<AdminQueueScreen> {
     super.initState();
     _loadInitial();
     _scrollController.addListener(() {
-      if (_loadingMore || !_hasMore || _initialLoading) return;
-      if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 240) {
+      if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 220) {
         _loadMore();
       }
     });
@@ -46,55 +44,44 @@ class _AdminQueueScreenState extends ConsumerState<AdminQueueScreen> {
 
   Future<void> _loadInitial() async {
     setState(() {
-      _error = null;
       _initialLoading = true;
+      _error = null;
       _page = 1;
       _hasMore = true;
       _items.clear();
     });
-
     try {
       final data = await ref.read(apiServiceProvider).getAdminQueue(page: 1);
       if (!mounted) return;
       setState(() {
-        _listKey = GlobalKey<AnimatedListState>();
         _items.addAll(data);
         _initialLoading = false;
         _hasMore = data.length >= 20;
       });
-    } catch (error) {
+    } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = error.toString().replaceFirst('Exception: ', '');
         _initialLoading = false;
+        _error = e.toString().replaceFirst('Exception: ', '');
       });
     }
   }
 
   Future<void> _loadMore() async {
-    if (_loadingMore || !_hasMore) return;
-
+    if (_loadingMore || !_hasMore || _initialLoading) return;
     setState(() => _loadingMore = true);
-    final nextPage = _page + 1;
-
     try {
-      final nextItems = await ref.read(apiServiceProvider).getAdminQueue(page: nextPage);
+      final nextPage = _page + 1;
+      final more = await ref.read(apiServiceProvider).getAdminQueue(page: nextPage);
       if (!mounted) return;
-
-      final start = _items.length;
       setState(() {
         _page = nextPage;
-        _items.addAll(nextItems);
+        _items.addAll(more);
+        _hasMore = more.length >= 20;
         _loadingMore = false;
-        _hasMore = nextItems.length >= 20;
       });
-
-      for (var i = 0; i < nextItems.length; i++) {
-        _listKey.currentState?.insertItem(start + i, duration: const Duration(milliseconds: 260));
-      }
     } catch (_) {
-      if (!mounted) return;
-      setState(() => _loadingMore = false);
+      if (mounted) setState(() => _loadingMore = false);
     }
   }
 
@@ -102,337 +89,175 @@ class _AdminQueueScreenState extends ConsumerState<AdminQueueScreen> {
     try {
       await ref.read(apiServiceProvider).logout();
     } catch (_) {}
-
     if (!mounted) return;
     await ref.read(authStateProvider.notifier).clearSession();
     if (!mounted) return;
     context.go('/login');
   }
 
-  Future<void> _approve(Map<String, dynamic> app, int index) async {
-    final appId = app['id']?.toString() ?? '';
-    if (appId.isEmpty) return;
-
-    try {
-      await ref.read(apiServiceProvider).approveApp(appId);
-      _removeItemAt(index);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('App approved successfully.')));
-    } catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))),
-      );
-    }
+  Future<void> _approve(Map<String, dynamic> app) async {
+    final id = app['id']?.toString() ?? '';
+    if (id.isEmpty) return;
+    await ref.read(apiServiceProvider).approveApp(id);
+    if (!mounted) return;
+    setState(() => _items.removeWhere((e) => e['id'].toString() == id));
   }
 
-  Future<void> _reject(Map<String, dynamic> app, int index) async {
-    final appId = app['id']?.toString() ?? '';
-    if (appId.isEmpty) return;
-
-    final reason = await showDialog<String>(
-      context: context,
-      builder: (_) => const _RejectDialog(),
-    );
-
-    if (reason == null) return;
-
-    try {
-      await ref.read(apiServiceProvider).rejectApp(appId, reason: reason);
-      _removeItemAt(index);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('App rejected.')));
-    } catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))),
-      );
-    }
-  }
-
-  void _removeItemAt(int index) {
-    if (index < 0 || index >= _items.length) return;
-    final removed = _items.removeAt(index);
-
-    _listKey.currentState?.removeItem(
-      index,
-      (context, animation) => SizeTransition(
-        sizeFactor: animation,
-        child: SlideTransition(
-          position: Tween<Offset>(begin: Offset.zero, end: const Offset(1.0, 0.0)).animate(animation),
-          child: _QueueCard(
-            app: removed,
-            onApprove: () {},
-            onReject: () {},
-          ),
-        ),
-      ),
-      duration: const Duration(milliseconds: 300),
-    );
-
-    setState(() {});
+  Future<void> _reject(Map<String, dynamic> app) async {
+    final id = app['id']?.toString() ?? '';
+    if (id.isEmpty) return;
+    final reason = await showDialog<String>(context: context, builder: (_) => const _RejectDialog());
+    if (reason == null || reason.isEmpty) return;
+    await ref.read(apiServiceProvider).rejectApp(id, reason: reason);
+    if (!mounted) return;
+    setState(() => _items.removeWhere((e) => e['id'].toString() == id));
   }
 
   @override
   Widget build(BuildContext context) {
+    final safeCount = _items.where((e) => ((e['security_score'] as num?)?.toInt() ?? 0) >= 85).length;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Review Queue'),
-        actions: [
-          IconButton(onPressed: _logout, icon: const Icon(Icons.logout)),
-        ],
+        backgroundColor: kNavyDeep,
+        title: Text('Admin Queue', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800)),
+        actions: [IconButton(onPressed: _logout, icon: const Icon(Icons.logout_rounded))],
       ),
       body: RefreshIndicator(
         onRefresh: _loadInitial,
-        child: _buildBody(),
+        child: _initialLoading
+            ? const _QueueShimmer()
+            : _error != null
+                ? ListView(children: [const SizedBox(height: 140), Center(child: Text(_error!))])
+                : ListView(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.all(14),
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(child: _statCard('Pending', _items.length, kCyan)),
+                          const SizedBox(width: 10),
+                          Expanded(child: _statCard('Safe', safeCount, kSafeGreen)),
+                          const SizedBox(width: 10),
+                          Expanded(child: _statCard('Review', _items.length - safeCount, kCautionAmb)),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      ..._items.map((item) => _queueCard(item)),
+                      if (_loadingMore)
+                        const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Center(child: CircularProgressIndicator()),
+                        ),
+                    ],
+                  ),
       ),
     );
   }
 
-  Widget _buildBody() {
-    if (_initialLoading) {
-      return _QueueShimmer();
-    }
-
-    if (_error != null) {
-      return ListView(
+  Widget _statCard(String title, int value, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [BoxShadow(color: Color(0x1A1A237E), blurRadius: 18, offset: Offset(0, 8))],
+      ),
+      child: Column(
         children: [
-          const SizedBox(height: 120),
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                children: [
-                  const Icon(Icons.error_outline, size: 56, color: Colors.redAccent),
-                  const SizedBox(height: 10),
-                  Text(_error!, textAlign: TextAlign.center),
-                  const SizedBox(height: 12),
-                  ElevatedButton.icon(
-                    onPressed: _loadInitial,
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Retry'),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          Text(title, style: GoogleFonts.spaceGrotesk(color: const Color(0xFF6B7280), fontSize: 12)),
+          const SizedBox(height: 5),
+          Text('$value', style: GoogleFonts.plusJakartaSans(color: color, fontWeight: FontWeight.w800, fontSize: 22)),
         ],
-      );
-    }
-
-    if (_items.isEmpty) {
-      return ListView(
-        children: const [
-          SizedBox(height: 160),
-          Center(
-            child: Text(
-              'Queue is empty — all caught up!',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-            ),
-          ),
-        ],
-      );
-    }
-
-    return ListView(
-      controller: _scrollController,
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-      children: [
-        AnimatedList(
-          key: _listKey,
-          initialItemCount: _items.length,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemBuilder: (context, index, animation) {
-            final app = _items[index];
-            return SizeTransition(
-              sizeFactor: animation,
-              child: _QueueCard(
-                app: app,
-                onApprove: () => _approve(app, index),
-                onReject: () => _reject(app, index),
-              ),
-            );
-          },
-        ),
-        const SizedBox(height: 10),
-        if (_loadingMore)
-          const Padding(
-            padding: EdgeInsets.all(16),
-            child: Center(child: CircularProgressIndicator()),
-          )
-        else if (_hasMore)
-          OutlinedButton.icon(
-            onPressed: _loadMore,
-            icon: const Icon(Icons.expand_more),
-            label: const Text('Load more'),
-          ),
-      ],
+      ),
     );
   }
-}
 
-class _QueueCard extends StatelessWidget {
-  const _QueueCard({
-    required this.app,
-    required this.onApprove,
-    required this.onReject,
-  });
-
-  final Map<String, dynamic> app;
-  final VoidCallback onApprove;
-  final VoidCallback onReject;
-
-  @override
-  Widget build(BuildContext context) {
-    final iconUrl = app['icon_url']?.toString() ?? '';
-    final name = app['name']?.toString() ?? 'Unknown app';
-    final email = app['developer_email']?.toString() ?? 'Unknown developer';
-    final submittedAt = app['submitted_at']?.toString() ?? app['created_at']?.toString() ?? '-';
+  Widget _queueCard(Map<String, dynamic> app) {
     final score = (app['security_score'] as num?)?.toInt() ?? 0;
-    final summary = app['security_summary']?.toString() ?? 'No AI summary yet.';
-    final dangerousPermissions =
-        (app['dangerous_permissions'] as List? ?? const []).map((e) => e.toString()).toList();
-    final suspiciousApis =
-        (app['suspicious_apis'] as List? ?? const []).map((e) => e.toString()).toList();
-
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: CachedNetworkImage(
-                    imageUrl: iconUrl,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: const [BoxShadow(color: Color(0x141A237E), blurRadius: 16, offset: Offset(0, 6))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: CachedNetworkImage(
+                  imageUrl: app['icon_url']?.toString() ?? '',
+                  width: 52,
+                  height: 52,
+                  errorWidget: (_, __, ___) => Container(
                     width: 52,
                     height: 52,
-                    fit: BoxFit.cover,
-                    errorWidget: (_, __, ___) => Container(
-                      color: Colors.grey.shade200,
-                      width: 52,
-                      height: 52,
-                      child: const Icon(Icons.apps),
+                    decoration: const BoxDecoration(gradient: kBrandGradient),
+                    child: const Icon(Icons.apps_rounded, color: Colors.white),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(app['name']?.toString() ?? '-', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, color: kNavyDeep)),
+                    Text(app['developer_email']?.toString() ?? '-', style: GoogleFonts.spaceGrotesk(fontSize: 12)),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(color: scoreColor(score).withOpacity(0.15), borderRadius: BorderRadius.circular(100)),
+                child: Text('${scoreLabel(score)} $score', style: GoogleFonts.plusJakartaSans(color: scoreColor(score), fontWeight: FontWeight.w800, fontSize: 11)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(app['security_summary']?.toString() ?? 'No AI summary available.', style: GoogleFonts.spaceGrotesk()),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(colors: [kSafeGreen, Color(0xFF00B07A)]),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(8),
+                      onTap: () => _approve(app),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        child: Center(child: Text('Approve', style: GoogleFonts.plusJakartaSans(color: Colors.white, fontWeight: FontWeight.w700))),
+                      ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(name, style: Theme.of(context).textTheme.titleMedium),
-                      const SizedBox(height: 3),
-                      Text(email, style: Theme.of(context).textTheme.bodySmall),
-                      const SizedBox(height: 2),
-                      Text('Submitted: $submittedAt', style: Theme.of(context).textTheme.bodySmall),
-                    ],
-                  ),
-                ),
-                SecurityBadge(
-                  size: SecurityBadgeSize.large,
-                  score: score,
-                  aiHint: summary,
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Risk level: ${_riskLabel(score)}',
-              style: TextStyle(
-                color: _riskColor(score),
-                fontWeight: FontWeight.w700,
               ),
-            ),
-            const SizedBox(height: 12),
-            Text(summary),
-            const SizedBox(height: 12),
-            Text('Dangerous permissions', style: Theme.of(context).textTheme.titleSmall),
-            const SizedBox(height: 6),
-            _buildChipRow(
-              dangerousPermissions,
-              bgColor: Colors.red.shade50,
-              fgColor: Colors.red.shade800,
-              emptyText: 'None detected',
-            ),
-            const SizedBox(height: 10),
-            Text('Suspicious APIs', style: Theme.of(context).textTheme.titleSmall),
-            const SizedBox(height: 6),
-            _buildChipRow(
-              suspiciousApis,
-              bgColor: Colors.amber.shade100,
-              fgColor: Colors.amber.shade900,
-              emptyText: 'None detected',
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: FilledButton(
-                    style: FilledButton.styleFrom(backgroundColor: Colors.green.shade700),
-                    onPressed: onApprove,
-                    child: const Text('APPROVE'),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    backgroundColor: kDangerRed.withOpacity(0.08),
+                    side: BorderSide(color: kDangerRed.withOpacity(0.5)),
                   ),
+                  onPressed: () => _reject(app),
+                  child: Text('Reject', style: GoogleFonts.plusJakartaSans(color: kDangerRed, fontWeight: FontWeight.w700)),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: FilledButton(
-                    style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
-                    onPressed: onReject,
-                    child: const Text('REJECT'),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
-  }
-
-  Widget _buildChipRow(
-    List<String> items, {
-    required Color bgColor,
-    required Color fgColor,
-    required String emptyText,
-  }) {
-    if (items.isEmpty) {
-      return Text(emptyText, style: TextStyle(color: fgColor));
-    }
-    return Wrap(
-      spacing: 6,
-      runSpacing: 6,
-      children: items
-          .map(
-            (item) => Chip(
-              visualDensity: VisualDensity.compact,
-              backgroundColor: bgColor,
-              label: Text(item, style: TextStyle(color: fgColor)),
-            ),
-          )
-          .toList(),
-    );
-  }
-
-  String _riskLabel(int score) {
-    if (score >= 85) return 'SAFE';
-    if (score >= 65) return 'LOW RISK';
-    if (score >= 45) return 'CAUTION';
-    if (score >= 25) return 'RISKY';
-    return 'DANGEROUS';
-  }
-
-  Color _riskColor(int score) {
-    if (score >= 85) return Colors.green;
-    if (score >= 65) return Colors.blue;
-    if (score >= 45) return Colors.amber.shade800;
-    if (score >= 25) return Colors.red;
-    return Colors.red.shade900;
   }
 }
 
@@ -444,79 +269,41 @@ class _RejectDialog extends StatefulWidget {
 }
 
 class _RejectDialogState extends State<_RejectDialog> {
-  final _reasonController = TextEditingController();
-  String? _error;
+  final _controller = TextEditingController();
 
   @override
   void dispose() {
-    _reasonController.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final length = _reasonController.text.length;
-
     return AlertDialog(
-      title: const Text('Reject app submission'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          TextField(
-            controller: _reasonController,
-            minLines: 3,
-            maxLines: 5,
-            maxLength: 500,
-            decoration: InputDecoration(
-              hintText: 'Enter rejection reason (minimum 20 characters)',
-              border: const OutlineInputBorder(),
-              errorText: _error,
-            ),
-            onChanged: (_) => setState(() => _error = null),
-          ),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Text('$length/500', style: Theme.of(context).textTheme.bodySmall),
-          ),
-        ],
-      ),
+      title: Text('Reject App', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800)),
+      content: TextField(controller: _controller, maxLines: 3, decoration: const InputDecoration(labelText: 'Reason')),
       actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
-        FilledButton(
-          onPressed: () {
-            final reason = _reasonController.text.trim();
-            if (reason.length < 20) {
-              setState(() => _error = 'Reason must be at least 20 characters.');
-              return;
-            }
-            Navigator.of(context).pop(reason);
-          },
-          child: const Text('Confirm'),
-        ),
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        FilledButton(onPressed: () => Navigator.pop(context, _controller.text.trim()), child: const Text('Reject')),
       ],
     );
   }
 }
 
 class _QueueShimmer extends StatelessWidget {
+  const _QueueShimmer();
+
   @override
   Widget build(BuildContext context) {
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: 4,
+      padding: const EdgeInsets.all(14),
+      itemCount: 6,
       itemBuilder: (_, __) => Padding(
         padding: const EdgeInsets.only(bottom: 12),
         child: Shimmer.fromColors(
-          baseColor: Colors.grey.shade300,
-          highlightColor: Colors.grey.shade100,
-          child: Container(
-            height: 260,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
+          baseColor: const Color(0xFFEAF3FF),
+          highlightColor: const Color(0xFFF7FBFF),
+          child: Container(height: 148, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14))),
         ),
       ),
     );
