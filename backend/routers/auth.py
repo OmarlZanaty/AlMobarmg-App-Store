@@ -99,6 +99,22 @@ class MessageResponse(BaseModel):
     message: str
 
 
+def _subscription_plan_value(user: User) -> str:
+    plan = user.subscription_plan
+    return plan.value if hasattr(plan, "value") else str(plan or "free")
+
+
+def _role_value(user: User) -> UserRole:
+    role = user.role
+    if isinstance(role, UserRole):
+        return role
+    try:
+        return UserRole(str(role))
+    except ValueError:
+        logger.warning("Unknown user role stored in database; defaulting to user", extra={"user_id": str(user.id)})
+        return UserRole.user
+
+
 @router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
 async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db)) -> RegisterResponse:
     email = payload.email.lower()
@@ -123,32 +139,49 @@ async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db))
 @router.post("/login", response_model=LoginResponse)
 async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)) -> LoginResponse:
     email = payload.email.lower()
-    result = await db.execute(select(User).where(User.email == email))
-    user = result.scalar_one_or_none()
+    try:
+        result = await db.execute(select(User).where(User.email == email))
+        user = result.scalar_one_or_none()
 
-    if not user or not await verify_password(payload.password, user.password_hash):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
+        if not user:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
+        try:
+            password_ok = await verify_password(payload.password, user.password_hash)
+        except Exception:
+            logger.exception("Password verification failed", extra={"email": email})
+            password_ok = False
+        if not password_ok:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
 
-    if not user.is_email_verified:
-        user.is_email_verified = True
-        await db.commit()
+        if not user.is_email_verified:
+            user.is_email_verified = True
+            await db.commit()
 
-    access_token = create_access_token(str(user.id), user.role.value)
-    refresh_token = create_refresh_token(str(user.id), user.role.value)
-    await store_refresh_token(str(user.id), refresh_token)
+        role = _role_value(user)
+        access_token = create_access_token(str(user.id), role.value)
+        refresh_token = create_refresh_token(str(user.id), role.value)
+        await store_refresh_token(str(user.id), refresh_token)
 
-    return LoginResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
-        token_type="bearer",
-        user=UserResponse(
-            id=str(user.id),
-            email=user.email,
-            name=user.name,
-            role=user.role,
-            subscription_plan=user.subscription_plan.value,
-        ),
-    )
+        return LoginResponse(
+            access_token=access_token,
+            refresh_token=refresh_token,
+            token_type="bearer",
+            user=UserResponse(
+                id=str(user.id),
+                email=user.email,
+                name=user.name,
+                role=role,
+                subscription_plan=_subscription_plan_value(user),
+            ),
+        )
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Unhandled login error", extra={"email": email})
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Login service is temporarily unavailable. Please try again.",
+        )
 
 
 @router.post("/refresh", response_model=RefreshResponse)

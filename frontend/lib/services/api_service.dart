@@ -100,8 +100,29 @@ class ApiService {
 
   Future<Map<String, dynamic>> login({required String email, required String password}) async {
     try {
-      final response = await _dio.post('/auth/login', data: {'email': email, 'password': password});
-      final data = Map<String, dynamic>.from(response.data as Map);
+      final response = await _dio.post(
+        '/auth/login',
+        data: {'email': email, 'password': password},
+        options: Options(validateStatus: (_) => true),
+      );
+      final payload = response.data;
+      final statusCode = response.statusCode ?? 0;
+
+      if (statusCode < 200 || statusCode >= 300) {
+        String message = 'Unable to sign in right now. Please try again later.';
+        if (payload is Map && payload['detail'] != null) {
+          message = payload['detail'].toString();
+        } else if (payload is Map && payload['message'] != null) {
+          message = payload['message'].toString();
+        }
+        throw Exception(message);
+      }
+
+      if (payload is! Map) {
+        throw Exception('Unexpected login response from server');
+      }
+
+      final data = Map<String, dynamic>.from(payload);
       final user = Map<String, dynamic>.from(data['user'] as Map? ?? const {});
 
       if (data['access_token'] != null) {
