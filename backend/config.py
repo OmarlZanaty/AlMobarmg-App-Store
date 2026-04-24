@@ -1,3 +1,4 @@
+import os
 from functools import lru_cache
 
 from pydantic import Field
@@ -48,6 +49,24 @@ class Settings(BaseSettings):
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
+    if os.getenv("TEST_ENV") == "1":
+        test_defaults = {
+            "DATABASE_URL": "sqlite+aiosqlite:///./test.db",
+            "REDIS_URL": "redis://localhost:6379/0",
+            "JWT_SECRET": "test-jwt-secret",
+            "JWT_REFRESH_SECRET": "test-jwt-refresh-secret",
+            "JWT_EXPIRES_IN": "15m",
+            "JWT_REFRESH_EXPIRES_IN": "7d",
+            "MOBSF_URL": "http://localhost:8000",
+            "MOBSF_API_KEY": "test-mobsf-key",
+            "VIRUSTOTAL_API_KEY": "test-vt-key",
+            "RESEND_API_KEY": "test-resend-key",
+            "EMAIL_FROM": "noreply@almobarmg.test",
+            "R2_BUCKET_NAME": "almobarmg-test-bucket",
+            "FRONTEND_URL": "http://localhost:3000",
+        }
+        for key, value in test_defaults.items():
+            os.environ.setdefault(key, value)
     return Settings()
 
 
