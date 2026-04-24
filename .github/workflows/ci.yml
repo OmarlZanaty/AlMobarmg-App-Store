@@ -54,6 +54,10 @@ jobs:
         with:
           channel: stable
 
+      - name: Enable Flutter web platform
+        working-directory: frontend
+        run: flutter create . --platforms web
+
       - name: Install Flutter dependencies
         working-directory: frontend
         run: flutter pub get

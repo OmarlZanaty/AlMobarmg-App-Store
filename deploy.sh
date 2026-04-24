@@ -15,8 +15,10 @@ if [ ! -d backend ] || [ ! -f backend/main.py ]; then
   exit 1
 fi
 
-echo "[1/11] Pulling latest code..."
-git pull --ff-only
+echo "[1/11] Syncing repository to origin/main..."
+git fetch origin main
+git reset --hard origin/main
+git clean -fd
 
 echo "[2/11] Activating virtual environment..."
 source "$VENV_PATH"
@@ -38,6 +40,7 @@ python -m backend.migrations.run
 echo "[5/11] Building Flutter web release..."
 if command -v flutter >/dev/null 2>&1; then
   cd frontend
+  flutter create . --platforms web
   flutter pub get
   flutter build web --release
 
