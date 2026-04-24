@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 
-import '../services/api_service.dart';
+import '../providers.dart';
 import 'developer/upload_screen.dart';
 
 class FixRejectionScreen extends ConsumerStatefulWidget {

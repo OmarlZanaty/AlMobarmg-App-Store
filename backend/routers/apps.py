@@ -140,7 +140,7 @@ async def create_app(
     description: Annotated[str, Form(min_length=50)],
     short_description: Annotated[str, Form(min_length=1, max_length=200)],
     category: Annotated[str, Form(min_length=1)],
-    version: Annotated[str, Form(min_length=1, max_length=64)] = Form(...),
+    version: Annotated[str, Form(min_length=1, max_length=64)],
     android_file: UploadFile | None = File(default=None),
     ios_pwa_url: str | None = Form(default=None),
     windows_file: UploadFile | None = File(default=None),

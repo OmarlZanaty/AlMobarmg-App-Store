@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -9,8 +10,11 @@ import resend
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from redis.asyncio import Redis
+from redis.exceptions import RedisError
 
 from backend.config import settings
+
+logger = logging.getLogger(__name__)
 
 pwd_context = CryptContext(schemes=["pbkdf2_sha256", "bcrypt"], deprecated="auto")
 redis_client: Redis = Redis.from_url(settings.redis_url, decode_responses=True)
@@ -57,16 +61,26 @@ def create_refresh_token(user_id: str, role: str) -> str:
 
 async def store_refresh_token(user_id: str, token: str) -> None:
     # Improvement: store SHA256(token) in Redis for defense in depth.
-    await redis_client.set(f"refresh:{user_id}", token, ex=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60)
+    try:
+        await redis_client.set(f"refresh:{user_id}", token, ex=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60)
+    except RedisError:
+        logger.exception("Failed to store refresh token in Redis; continuing with stateless refresh fallback")
 
 
 async def verify_refresh_token(user_id: str, token: str) -> bool:
-    stored_token = await redis_client.get(f"refresh:{user_id}")
+    try:
+        stored_token = await redis_client.get(f"refresh:{user_id}")
+    except RedisError:
+        logger.exception("Failed to verify refresh token in Redis; allowing JWT-only refresh validation")
+        return True
     return bool(stored_token and secrets.compare_digest(stored_token, token))
 
 
 async def delete_refresh_token(user_id: str) -> None:
-    await redis_client.delete(f"refresh:{user_id}")
+    try:
+        await redis_client.delete(f"refresh:{user_id}")
+    except RedisError:
+        logger.exception("Failed to delete refresh token from Redis")
 
 
 async def generate_otp(email: str) -> str:
