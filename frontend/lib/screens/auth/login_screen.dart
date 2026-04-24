@@ -73,89 +73,93 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               constraints: const BoxConstraints(maxWidth: 420),
               child: Form(
                 key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    TextFormField(
-                      controller: _emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      textInputAction: TextInputAction.next,
-                      textDirection: TextDirection.ltr,
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        hintText: 'you@example.com',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) {
-                        final email = value?.trim() ?? '';
-                        if (email.isEmpty) return 'Email is required';
-                        const pattern = r'^[^\s@]+@[^\s@]+\.[^\s@]+$';
-                        if (!RegExp(pattern).hasMatch(email)) {
-                          return 'Please enter a valid email';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _passwordController,
-                      obscureText: _obscurePassword,
-                      textInputAction: TextInputAction.done,
-                      textDirection: TextDirection.ltr,
-                      decoration: InputDecoration(
-                        labelText: 'Password',
-                        border: const OutlineInputBorder(),
-                        suffixIcon: IconButton(
-                          icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
-                          onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                child: AutofillGroup(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      TextFormField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
+                        textDirection: TextDirection.ltr,
+                        autofillHints: const [AutofillHints.username, AutofillHints.email],
+                        decoration: const InputDecoration(
+                          labelText: 'Email',
+                          hintText: 'you@example.com',
+                          border: OutlineInputBorder(),
                         ),
-                      ),
-                      onFieldSubmitted: (_) => _submit(),
-                      validator: (value) {
-                        final password = value ?? '';
-                        if (password.isEmpty) return 'Password is required';
-                        if (password.length < 8) return 'Password must be at least 8 characters';
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                    Align(
-                      alignment: textDirection == TextDirection.rtl
-                          ? Alignment.centerLeft
-                          : Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: () {
-                          showDialog<void>(
-                            context: context,
-                            builder: (_) => const ForgotPasswordDialog(),
-                          );
+                        validator: (value) {
+                          final email = value?.trim() ?? '';
+                          if (email.isEmpty) return 'Email is required';
+                          const pattern = r'^[^\s@]+@[^\s@]+\.[^\s@]+$';
+                          if (!RegExp(pattern).hasMatch(email)) {
+                            return 'Please enter a valid email';
+                          }
+                          return null;
                         },
-                        child: const Text('Forgot password?'),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    ElevatedButton(
-                      onPressed: _submitting ? null : _submit,
-                      child: _submitting
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Text('Login'),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text("Don't have an account?"),
-                        TextButton(
-                          onPressed: () => context.go('/register'),
-                          child: const Text('Register'),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _passwordController,
+                        obscureText: _obscurePassword,
+                        textInputAction: TextInputAction.done,
+                        textDirection: TextDirection.ltr,
+                        autofillHints: const [AutofillHints.password],
+                        decoration: InputDecoration(
+                          labelText: 'Password',
+                          border: const OutlineInputBorder(),
+                          suffixIcon: IconButton(
+                            icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
+                            onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                          ),
                         ),
-                      ],
-                    ),
-                  ],
+                        onFieldSubmitted: (_) => _submit(),
+                        validator: (value) {
+                          final password = value ?? '';
+                          if (password.isEmpty) return 'Password is required';
+                          if (password.length < 8) return 'Password must be at least 8 characters';
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: textDirection == TextDirection.rtl
+                            ? Alignment.centerLeft
+                            : Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: () {
+                            showDialog<void>(
+                              context: context,
+                              builder: (_) => const ForgotPasswordDialog(),
+                            );
+                          },
+                          child: const Text('Forgot password?'),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      ElevatedButton(
+                        onPressed: _submitting ? null : _submit,
+                        child: _submitting
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Text('Login'),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text("Don't have an account?"),
+                          TextButton(
+                            onPressed: () => context.go('/register'),
+                            child: const Text('Register'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -165,7 +169,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 }
-
 class ForgotPasswordDialog extends ConsumerStatefulWidget {
   const ForgotPasswordDialog({super.key});
 
