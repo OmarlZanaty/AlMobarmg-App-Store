@@ -61,7 +61,8 @@ class _DeveloperDashboardScreenState extends ConsumerState<DeveloperDashboardScr
   @override
   Widget build(BuildContext context) {
     final appsState = ref.watch(developerAppsProvider);
-    final name = ref.watch(authStateProvider).valueOrNull?.user?['name']?.toString() ?? 'Developer';
+    final authState = ref.watch(authStateProvider);
+    final name = authState.role == 'developer' ? 'Developer Portal' : 'Developer';
 
     return Scaffold(
       appBar: GradientAppBar(
