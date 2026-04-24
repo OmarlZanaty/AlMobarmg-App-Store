@@ -124,7 +124,8 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           state.matchedLocation == '/register' ||
           state.matchedLocation == '/verify-email' ||
           state.matchedLocation == '/reset-password';
-      if (!auth.isAuthenticated && !onAuthPage && state.matchedLocation != '/') {
+      const publicRoutes = {'/', '/home'};
+      if (!auth.isAuthenticated && !onAuthPage && !publicRoutes.contains(state.matchedLocation)) {
         return '/login';
       }
       if (auth.isAuthenticated && onAuthPage) {
