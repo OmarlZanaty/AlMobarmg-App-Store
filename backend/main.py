@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -80,6 +80,16 @@ app.include_router(apps_router)
 app.include_router(admin_router)
 app.include_router(payments_router)
 app.include_router(health_router)
+
+
+@app.get("/", include_in_schema=False)
+async def home_page() -> FileResponse:
+    return FileResponse("backend/static/home.html")
+
+
+@app.get("/home", include_in_schema=False)
+async def app_store_home() -> RedirectResponse:
+    return RedirectResponse(url=settings.frontend_url)
 
 
 @app.exception_handler(HTTPException)
