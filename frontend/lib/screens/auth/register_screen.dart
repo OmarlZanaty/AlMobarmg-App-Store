@@ -5,7 +5,9 @@ import 'package:go_router/go_router.dart';
 import '../../providers.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
-  const RegisterScreen({super.key});
+  const RegisterScreen({super.key, this.initialRole});
+
+  final String? initialRole;
 
   @override
   ConsumerState<RegisterScreen> createState() => _RegisterScreenState();
@@ -21,6 +23,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   bool _submitting = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  String _selectedRole = 'user';
+
+  @override
+  void initState() {
+    super.initState();
+    final initialRole = widget.initialRole;
+    if (initialRole == 'developer' || initialRole == 'user') {
+      _selectedRole = initialRole;
+    }
+  }
 
   @override
   void dispose() {
@@ -42,6 +54,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         'name': _nameController.text.trim(),
         'email': _emailController.text.trim(),
         'password': _passwordController.text,
+        'role': _selectedRole,
       });
 
       if (!mounted) return;
@@ -89,6 +102,28 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         if (name.isEmpty) return 'Name is required';
                         if (name.length < 2) return 'Name must be at least 2 characters';
                         return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      value: _selectedRole,
+                      decoration: const InputDecoration(
+                        labelText: 'Account type',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'user',
+                          child: Text('User Account'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'developer',
+                          child: Text('Developer Account'),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        if (value == null) return;
+                        setState(() => _selectedRole = value);
                       },
                     ),
                     const SizedBox(height: 12),
