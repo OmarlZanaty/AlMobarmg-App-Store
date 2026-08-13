@@ -1,0 +1,1050 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>SamaFox — سما فوكس | Al Mobarmg</title>
+<meta name="description" content="SamaFox — تطبيق الدردشة الصوتية الاجتماعية: غرف صوتية، هدايا، إطارات، ومجتمع عربي. من Al Mobarmg." />
+
+<!-- Open Graph: how the page looks when shared on WhatsApp / Facebook -->
+<meta property="og:type" content="website" />
+<meta property="og:title" content="SamaFox — دردشة صوتية اجتماعية" />
+<meta property="og:description" content="غرف صوتية حية، هدايا، إطارات ومجتمع عربي. حمّل التطبيق من Google Play." />
+<meta property="og:image" content="samafox-logo.png" />
+
+<link rel="icon" href="samafox-logo.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet" />
+
+<style>
+/* ────────────────────────────────────────────────────────────────
+   SamaFox product page — self-contained.
+   Everything is namespaced under .sf- so this file can be dropped into
+   an existing site without colliding with its stylesheet.
+   Palette is taken from the app icon: deep purple ground, violet→magenta
+   fox gradient, gold accents.
+   ──────────────────────────────────────────────────────────────── */
+.sf-root {
+  --sf-bg: #12071f;
+  --sf-surface: #1d0f33;
+  --sf-surface-2: #281547;
+  --sf-line: rgba(240, 194, 75, 0.22);
+  --sf-purple: #7c3aed;
+  --sf-magenta: #a21caf;
+  --sf-gold: #f0c24b;
+  --sf-gold-deep: #e0a82e;
+  --sf-ink: #f6f0ff;
+  --sf-muted: #b3a1cf;
+  --sf-radius: 20px;
+  --sf-max: 1080px;
+
+  background: var(--sf-bg);
+  color: var(--sf-ink);
+  font-family: 'Cairo', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  line-height: 1.75;
+  min-height: 100vh;
+  /* Room for the sticky mobile download bar so it never covers the footer. */
+  padding-bottom: 96px;
+}
+.sf-root *, .sf-root *::before, .sf-root *::after { box-sizing: border-box; }
+.sf-root :where(h1, h2, h3, h4, p, ul, ol) { margin: 0; }
+.sf-root img { max-width: 100%; display: block; }
+
+.sf-wrap { max-width: var(--sf-max); margin: 0 auto; padding: 0 20px; }
+
+/* ── Top bar ─────────────────────────────────────────────────── */
+.sf-topbar {
+  position: sticky; top: 0; z-index: 30;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 12px 20px;
+  background: rgba(18, 7, 31, 0.86);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+.sf-back {
+  color: var(--sf-muted); text-decoration: none; font-size: 0.95rem; font-weight: 600;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.sf-back:hover { color: var(--sf-gold); }
+.sf-back::before { content: '‹'; font-size: 1.4rem; line-height: 1; }
+html[dir='ltr'] .sf-back::before { content: '‹'; }
+.sf-lang {
+  background: transparent; border: 1px solid var(--sf-line); color: var(--sf-gold);
+  border-radius: 999px; padding: 5px 16px; font: inherit; font-size: 0.85rem;
+  font-weight: 700; cursor: pointer;
+}
+.sf-lang:hover { background: rgba(240, 194, 75, 0.1); }
+
+/* ── Hero ────────────────────────────────────────────────────── */
+.sf-hero { padding: 36px 0 28px; }
+.sf-hero-grid {
+  display: grid; grid-template-columns: 128px 1fr auto;
+  gap: 22px; align-items: center;
+}
+.sf-icon {
+  width: 128px; height: 128px; border-radius: 28px;
+  box-shadow: 0 18px 44px rgba(124, 58, 237, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+.sf-name { font-size: clamp(1.7rem, 4.4vw, 2.5rem); font-weight: 800; letter-spacing: -0.5px; }
+.sf-dev { color: var(--sf-gold); font-weight: 700; font-size: 1rem; text-decoration: none; }
+.sf-dev:hover { text-decoration: underline; }
+.sf-tagline { color: var(--sf-muted); font-size: 0.98rem; margin-top: 2px !important; }
+
+/* GET button — the primary conversion point. */
+.sf-get {
+  appearance: none; border: 0; cursor: pointer; font: inherit; font-weight: 800;
+  color: #1a0b2e; background: linear-gradient(135deg, #f7d472, var(--sf-gold) 45%, var(--sf-gold-deep));
+  border-radius: 999px; padding: 13px 40px; font-size: 1.05rem; white-space: nowrap;
+  box-shadow: 0 10px 26px rgba(240, 194, 75, 0.3);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.sf-get:hover { transform: translateY(-2px); box-shadow: 0 14px 32px rgba(240, 194, 75, 0.42); }
+.sf-get:active { transform: translateY(0); }
+.sf-get-note { color: var(--sf-muted); font-size: 0.8rem; text-align: center; margin-top: 8px !important; }
+
+@media (max-width: 720px) {
+  .sf-hero-grid { grid-template-columns: 92px 1fr; gap: 16px; }
+  .sf-icon { width: 92px; height: 92px; border-radius: 21px; }
+  /* On mobile the hero button is redundant — the sticky bar carries it. */
+  .sf-hero-cta { grid-column: 1 / -1; }
+  .sf-get { width: 100%; }
+}
+
+/* ── Meta strip (rating / category / age / size) ─────────────── */
+.sf-meta {
+  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
+  gap: 10px; overflow-x: auto; scrollbar-width: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  padding: 16px 0; margin-top: 26px;
+}
+.sf-meta::-webkit-scrollbar { display: none; }
+.sf-meta-cell { text-align: center; min-width: 96px; }
+.sf-meta-label {
+  color: var(--sf-muted); font-size: 0.68rem; font-weight: 700;
+  letter-spacing: 0.09em; text-transform: uppercase;
+}
+.sf-meta-value { font-size: 1.2rem; font-weight: 800; color: var(--sf-ink); }
+.sf-meta-sub { color: var(--sf-muted); font-size: 0.72rem; }
+
+/* ── Sections ────────────────────────────────────────────────── */
+.sf-section { padding: 34px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
+.sf-h2 { font-size: 1.35rem; font-weight: 800; margin-bottom: 14px !important; }
+.sf-body { color: #ddd2f0; font-size: 1rem; }
+.sf-body p + p { margin-top: 12px !important; }
+
+/* Description clamp + "more" toggle, App Store style. */
+.sf-clamp {
+  display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.sf-more {
+  background: none; border: 0; color: var(--sf-gold); font: inherit; font-weight: 700;
+  cursor: pointer; padding: 4px 0; margin-top: 4px;
+}
+
+/* ── Screenshots ─────────────────────────────────────────────── */
+.sf-shots {
+  display: flex; gap: 14px; overflow-x: auto; padding: 4px 20px 18px;
+  scroll-snap-type: x mandatory; scrollbar-width: none;
+  /* Bleed to the viewport edge so the strip reads as scrollable. */
+  margin: 0 -20px;
+}
+.sf-shots::-webkit-scrollbar { display: none; }
+.sf-shot {
+  flex: 0 0 auto; width: 232px; aspect-ratio: 9 / 19.5;
+  border-radius: 18px; scroll-snap-align: start; overflow: hidden;
+  border: 1px solid var(--sf-line);
+  background: linear-gradient(160deg, var(--sf-surface-2), var(--sf-surface));
+  object-fit: cover;
+}
+/* Placeholder shown until a real screenshot file exists at the src path. */
+.sf-shot-ph {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px; text-align: center; padding: 20px; color: var(--sf-muted); font-size: 0.85rem;
+}
+.sf-shot-ph span { font-size: 2rem; opacity: 0.55; }
+
+/* ── Feature list ────────────────────────────────────────────── */
+.sf-features { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+.sf-feature {
+  background: var(--sf-surface); border: 1px solid var(--sf-line);
+  border-radius: var(--sf-radius); padding: 18px;
+}
+.sf-feature-ico { font-size: 1.6rem; margin-bottom: 8px; }
+.sf-feature-t { font-weight: 800; margin-bottom: 4px !important; }
+.sf-feature-d { color: var(--sf-muted); font-size: 0.9rem; }
+
+/* ── Information table ───────────────────────────────────────── */
+.sf-info { display: grid; gap: 0; }
+.sf-info-row {
+  display: flex; justify-content: space-between; gap: 20px;
+  padding: 13px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0.95rem;
+}
+.sf-info-row:last-child { border-bottom: 0; }
+.sf-info-k { color: var(--sf-muted); }
+.sf-info-v { font-weight: 700; text-align: end; word-break: break-word; }
+
+/* ── Sticky mobile download bar ──────────────────────────────── */
+.sf-sticky {
+  position: fixed; inset-inline: 0; bottom: 0; z-index: 40;
+  display: none; align-items: center; gap: 14px;
+  padding: 12px 18px calc(12px + env(safe-area-inset-bottom));
+  background: rgba(18, 7, 31, 0.95);
+  backdrop-filter: blur(16px);
+  border-top: 1px solid var(--sf-line);
+}
+.sf-sticky img { width: 42px; height: 42px; border-radius: 11px; }
+.sf-sticky-name { font-weight: 800; font-size: 0.95rem; line-height: 1.3; }
+.sf-sticky-sub { color: var(--sf-muted); font-size: 0.75rem; line-height: 1.3; }
+.sf-sticky .sf-get { padding: 10px 26px; font-size: 0.95rem; margin-inline-start: auto; }
+.sf-sticky.is-on { display: flex; }
+
+.sf-footer { padding: 26px 0; color: var(--sf-muted); font-size: 0.85rem; text-align: center; }
+.sf-footer a { color: var(--sf-gold); text-decoration: none; }
+
+/* ────────────────────────────────────────────────────────────────
+   Activation modal — ported from the Cairo Shuttle Bus site.
+   A Play closed-test app cannot be opened with a plain link, so the
+   button runs this flow: collect the Google address → enroll it →
+   wait out Play's propagation → hand off to the Play Store app.
+   ──────────────────────────────────────────────────────────────── */
+.act-overlay {
+  position: fixed; inset: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: center; padding: 18px;
+  background: rgba(8, 3, 15, 0.82); backdrop-filter: blur(6px);
+}
+.act-overlay[hidden] { display: none; }
+.act-modal {
+  position: relative; width: 100%; max-width: 430px;
+  max-height: calc(100vh - 36px); overflow-y: auto;
+  background: var(--sf-surface, #1d0f33); color: #f6f0ff;
+  border: 1px solid rgba(240, 194, 75, 0.28); border-radius: 22px;
+  padding: 26px 22px; text-align: center;
+  font-family: 'Cairo', system-ui, sans-serif;
+  box-shadow: 0 26px 70px rgba(0, 0, 0, 0.6);
+}
+.act-close {
+  position: absolute; inset-inline-end: 14px; top: 12px;
+  background: none; border: 0; color: #b3a1cf; font-size: 1.2rem; cursor: pointer; line-height: 1;
+}
+.act-logo { width: 66px; height: 66px; border-radius: 16px; margin: 0 auto 12px; }
+.act-modal h4 { font-size: 1.2rem; font-weight: 800; margin: 0 0 8px; }
+.act-sub { color: #b3a1cf; font-size: 0.9rem; margin: 0 0 16px; }
+.act-input {
+  width: 100%; background: #12071f; border: 1px solid rgba(240, 194, 75, 0.28);
+  color: #f6f0ff; border-radius: 12px; padding: 12px 15px; font: inherit;
+  font-size: 0.98rem; margin-bottom: 10px; text-align: start; direction: ltr;
+}
+.act-input:focus { outline: 2px solid rgba(240, 194, 75, 0.5); outline-offset: 1px; }
+.act-add {
+  background: none; border: 0; color: #f0c24b; font: inherit; font-size: 0.85rem;
+  font-weight: 700; cursor: pointer; display: block; margin: 2px auto 14px;
+}
+.act-btn {
+  display: block; width: 100%; appearance: none; border: 0; cursor: pointer;
+  font: inherit; font-weight: 800; font-size: 1rem; color: #1a0b2e;
+  background: linear-gradient(135deg, #f7d472, #f0c24b 45%, #e0a82e);
+  border-radius: 999px; padding: 13px 20px; text-decoration: none; text-align: center;
+}
+.act-btn-ghost {
+  background: transparent; color: #f0c24b;
+  border: 1px solid rgba(240, 194, 75, 0.45); margin-top: 10px;
+}
+.act-note { color: #b3a1cf; font-size: 0.78rem; margin: 12px 0 0; }
+.act-status { color: #ddd2f0; font-size: 0.92rem; margin: 6px 0 0; }
+.act-status .ok { color: #4ade80; font-weight: 800; }
+.act-warn { color: #f0c24b; font-weight: 700; font-size: 0.95rem; margin-top: 6px; }
+.act-switch { color: #b3a1cf; font-size: 0.8rem; margin: 12px 0 0; }
+.act-err {
+  background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #fca5a5; border-radius: 12px; padding: 10px 12px; font-size: 0.86rem; margin-top: 12px;
+}
+.act-spin {
+  width: 26px; height: 26px; margin: 12px auto; border-radius: 50%;
+  border: 3px solid rgba(240, 194, 75, 0.25); border-top-color: #f0c24b;
+  animation: act-rot 0.8s linear infinite;
+}
+@keyframes act-rot { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .act-spin { animation-duration: 2.4s; }
+  .sf-get { transition: none; }
+}
+</style>
+</head>
+
+<body>
+<div class="sf-root" id="sfRoot">
+
+  <!-- ── Top bar ───────────────────────────────────────────────── -->
+  <div class="sf-topbar">
+    <!-- Point this at your store index. -->
+    <a class="sf-back" href="../" data-i18n="nav.back">كل التطبيقات</a>
+    <button type="button" class="sf-lang" id="sfLang">EN</button>
+  </div>
+
+  <div class="sf-wrap">
+
+    <!-- ── Hero ────────────────────────────────────────────────── -->
+    <header class="sf-hero">
+      <div class="sf-hero-grid">
+        <img class="sf-icon" src="samafox-logo.png" alt="SamaFox" />
+        <div>
+          <h1 class="sf-name">SamaFox</h1>
+          <a class="sf-dev" href="../" data-i18n="hero.dev">Al Mobarmg</a>
+          <p class="sf-tagline" data-i18n="hero.tagline">دردشة صوتية اجتماعية · غرف حية · هدايا وإطارات</p>
+        </div>
+        <div class="sf-hero-cta">
+          <button type="button" class="sf-get js-play-activate" data-app="samafox" data-i18n="cta.get">تحميل</button>
+          <p class="sf-get-note" data-i18n="cta.note">مجانًا · من Google Play</p>
+        </div>
+      </div>
+
+      <!-- ── Meta strip ──────────────────────────────────────────
+           Deliberately no star rating: the app is in closed testing and
+           has no public Play rating yet, so inventing one would be a lie
+           on your own store page. Swap the first cell for a real rating
+           once Play reports one.
+      -->
+      <div class="sf-meta">
+        <div class="sf-meta-cell">
+          <div class="sf-meta-label" data-i18n="meta.status">الحالة</div>
+          <div class="sf-meta-value" data-i18n="meta.statusV">جديد</div>
+          <div class="sf-meta-sub" data-i18n="meta.statusSub">نسخة تجريبية</div>
+        </div>
+        <div class="sf-meta-cell">
+          <div class="sf-meta-label" data-i18n="meta.category">الفئة</div>
+          <div class="sf-meta-value">🦊</div>
+          <div class="sf-meta-sub" data-i18n="meta.categorySub">اجتماعي</div>
+        </div>
+        <div class="sf-meta-cell">
+          <div class="sf-meta-label" data-i18n="meta.version">الإصدار</div>
+          <div class="sf-meta-value">1.0.5</div>
+          <div class="sf-meta-sub">build 11</div>
+        </div>
+        <div class="sf-meta-cell">
+          <div class="sf-meta-label" data-i18n="meta.dev">المطوّر</div>
+          <div class="sf-meta-value">AM</div>
+          <div class="sf-meta-sub">Al Mobarmg</div>
+        </div>
+        <div class="sf-meta-cell">
+          <div class="sf-meta-label" data-i18n="meta.lang">اللغة</div>
+          <div class="sf-meta-value">ع</div>
+          <div class="sf-meta-sub" data-i18n="meta.langSub">+ EN</div>
+        </div>
+      </div>
+    </header>
+
+    <!-- ── Screenshots ───────────────────────────────────────────
+         Drop real PNGs at shots/1.png … shots/5.png (portrait, 9:19.5).
+         Until a file exists the slide falls back to a styled placeholder,
+         so the page never shows a broken image.
+    -->
+    <section class="sf-section">
+      <h2 class="sf-h2" data-i18n="sec.preview">معاينة</h2>
+      <div class="sf-shots" id="sfShots">
+        <img class="sf-shot" src="shots/1.png" alt="" data-ph="الغرف الصوتية" />
+        <img class="sf-shot" src="shots/2.png" alt="" data-ph="المقاعد والمايك" />
+        <img class="sf-shot" src="shots/3.png" alt="" data-ph="الهدايا" />
+        <img class="sf-shot" src="shots/4.png" alt="" data-ph="الإطارات والملف الشخصي" />
+        <img class="sf-shot" src="shots/5.png" alt="" data-ph="الرسائل" />
+      </div>
+    </section>
+
+    <!-- ── Description ───────────────────────────────────────────
+         First-draft copy written from the app's own feature set.
+         Edit freely — this is marketing text, not generated data.
+    -->
+    <section class="sf-section">
+      <h2 class="sf-h2" data-i18n="sec.about">عن التطبيق</h2>
+      <div class="sf-body sf-clamp" id="sfDesc">
+        <p data-i18n="about.p1">SamaFox تطبيق دردشة صوتية اجتماعية — تدخل غرفة، تاخد مايك، وتتكلم مع ناس حقيقية في الوقت الحقيقي.</p>
+        <p data-i18n="about.p2">اعمل غرفتك الخاصة، اتحكم في المقاعد والمايكات، وابعت هدايا لأصحابك على الهواء. ملفك الشخصي بيتزيّن بالإطارات والعلاقات اللي بتكسبها مع مجتمعك.</p>
+        <p data-i18n="about.p3">واجهة عربية بالكامل، خفيفة على الهاتف، ومصمّمة للاستخدام اليومي.</p>
+      </div>
+      <button type="button" class="sf-more" id="sfMore" data-i18n="about.more">المزيد</button>
+    </section>
+
+    <!-- ── Features ──────────────────────────────────────────────── -->
+    <section class="sf-section">
+      <h2 class="sf-h2" data-i18n="sec.features">المميزات</h2>
+      <div class="sf-features">
+        <div class="sf-feature">
+          <div class="sf-feature-ico">🎙️</div>
+          <p class="sf-feature-t" data-i18n="f1.t">غرف صوتية حية</p>
+          <p class="sf-feature-d" data-i18n="f1.d">مقاعد مايك بتحكم كامل — قفل، فتح، ودعوة للمتحدثين.</p>
+        </div>
+        <div class="sf-feature">
+          <div class="sf-feature-ico">🎁</div>
+          <p class="sf-feature-t" data-i18n="f2.t">هدايا على الهواء</p>
+          <p class="sf-feature-d" data-i18n="f2.d">ابعت هدية لأي حد في الغرفة وتظهر للجميع لحظتها.</p>
+        </div>
+        <div class="sf-feature">
+          <div class="sf-feature-ico">🖼️</div>
+          <p class="sf-feature-t" data-i18n="f3.t">إطارات وعلاقات</p>
+          <p class="sf-feature-d" data-i18n="f3.d">زيّن ملفك بإطارات مميزة وابنِ علاقاتك داخل المجتمع.</p>
+        </div>
+        <div class="sf-feature">
+          <div class="sf-feature-ico">💬</div>
+          <p class="sf-feature-t" data-i18n="f4.t">دردشة ومتابعة</p>
+          <p class="sf-feature-d" data-i18n="f4.d">رسائل خاصة، متابعة، وبحث سريع عن الغرف والأشخاص.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── What's new ────────────────────────────────────────────── -->
+    <section class="sf-section">
+      <h2 class="sf-h2" data-i18n="sec.new">الجديد</h2>
+      <div class="sf-body">
+        <p><strong>1.0.5</strong> — <span data-i18n="new.body">تحسينات في أداء الغرف الصوتية، وإضافات جديدة للهدايا والإطارات، وإصلاحات عامة للاستقرار.</span></p>
+      </div>
+    </section>
+
+    <!-- ── Information ───────────────────────────────────────────── -->
+    <section class="sf-section">
+      <h2 class="sf-h2" data-i18n="sec.info">المعلومات</h2>
+      <div class="sf-info">
+        <div class="sf-info-row"><span class="sf-info-k" data-i18n="info.dev">المطوّر</span><span class="sf-info-v">Al Mobarmg</span></div>
+        <div class="sf-info-row"><span class="sf-info-k" data-i18n="info.version">الإصدار</span><span class="sf-info-v">1.0.5 (11)</span></div>
+        <div class="sf-info-row"><span class="sf-info-k" data-i18n="info.pkg">معرّف التطبيق</span><span class="sf-info-v">com.almobarmg.samafox</span></div>
+        <div class="sf-info-row"><span class="sf-info-k" data-i18n="info.compat">التوافق</span><span class="sf-info-v" data-i18n="info.compatV">أندرويد</span></div>
+        <div class="sf-info-row"><span class="sf-info-k" data-i18n="info.langs">اللغات</span><span class="sf-info-v" data-i18n="info.langsV">العربية، الإنجليزية</span></div>
+      </div>
+    </section>
+
+    <div class="sf-footer">
+      <p>© <span id="sfYear"></span> Al Mobarmg — <a href="../" data-i18n="foot.store">متجر التطبيقات</a></p>
+    </div>
+  </div>
+
+  <!-- ── Sticky mobile download bar ──────────────────────────────── -->
+  <div class="sf-sticky" id="sfSticky">
+    <img src="samafox-logo.png" alt="" />
+    <div>
+      <div class="sf-sticky-name">SamaFox</div>
+      <div class="sf-sticky-sub" data-i18n="cta.note">مجانًا · من Google Play</div>
+    </div>
+    <button type="button" class="sf-get js-play-activate" data-app="samafox" data-i18n="cta.get">تحميل</button>
+  </div>
+
+  <!-- ── Activation modal ────────────────────────────────────────── -->
+  <div id="actOverlay" class="act-overlay" hidden>
+    <div class="act-modal" role="dialog" aria-modal="true" aria-labelledby="actTitle">
+      <button type="button" class="act-close" id="actClose" aria-label="إغلاق">✕</button>
+      <img src="samafox-logo.png" class="act-logo" alt="" />
+      <h4 id="actTitle" data-i18n="am.title">تفعيل التحميل من Google Play</h4>
+
+      <!-- Account-picker stage (Google Identity Services). Only renders when
+           GOOGLE_CLIENT_ID is set AND this page's origin is registered on that
+           OAuth client — otherwise we go straight to the typed-email stage. -->
+      <div id="actPickerStage" hidden>
+        <p class="act-sub" data-i18n="am.pick">اختر حساب Google المستخدم على هاتفك — بنقرة واحدة، بدون كتابة.</p>
+        <div id="actGsiBtn" style="display:flex;justify-content:center;min-height:44px"></div>
+        <div id="actPickSpin" class="act-spin" style="display:none"></div>
+        <button type="button" id="actManualLink" class="act-add" style="margin-top:12px" data-i18n="am.manual">أو اكتب بريدك يدويًا</button>
+      </div>
+
+      <div id="actFormStage">
+        <p class="act-sub" data-i18n="am.sub">اكتب بريد Google المستخدم على هاتفك — التفعيل تلقائي ويستغرق حوالي دقيقة واحدة.</p>
+        <form id="actForm" novalidate>
+          <input class="act-input" id="actEmail" type="email" inputmode="email" autocomplete="email" placeholder="you@gmail.com" required />
+          <div id="actExtra"></div>
+          <button type="button" id="actAddMore" class="act-add" data-i18n="am.add">+ أضف حسابًا آخر موجودًا على نفس الهاتف</button>
+          <button type="submit" id="actGo" class="act-btn" data-i18n="am.go">فعّل وحمّل الآن</button>
+        </form>
+        <p class="act-note" data-i18n="am.note">مهم: اكتب نفس الحساب المسجّل في متجر Google Play على هاتفك</p>
+        <div id="actSpin" class="act-spin" hidden></div>
+      </div>
+
+      <div id="actProgress" hidden>
+        <div id="actProgSpin" class="act-spin" style="display:block;width:34px;height:34px;margin:18px auto 14px"></div>
+        <p class="act-status" id="actStatus" style="display:none" data-i18n="am.working">جارِ تفعيل التحميل لحسابك…</p>
+        <div class="act-warn" id="actWarn" data-i18n="am.stay">جارٍ فتح Google Play — ابقَ في الصفحة</div>
+        <a id="actOpenPlay" class="act-btn" style="margin-top:14px" hidden data-i18n="am.open">افتح Google Play</a>
+        <a id="actDelayedWa" class="act-btn act-btn-ghost" target="_blank" rel="noopener" hidden data-i18n="am.wa">تواصل معنا على واتساب</a>
+        <p class="act-switch" id="actSwitch" hidden data-i18n="am.switch">لو التطبيق مش ظاهر في المتجر: اضغط صورة حسابك (أعلى يمين Play Store) وبدّل للحساب اللي سجّلته هنا، ثم افتح الرابط تاني.</p>
+      </div>
+
+      <div id="actErr" class="act-err" hidden></div>
+    </div>
+  </div>
+</div>
+
+<!-- Google Identity Services — only needed if you enable the account picker. -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════
+   SamaFox — Google Play download activation.
+
+   SamaFox ships on a Play CLOSED TESTING track, so the download is not a
+   link: a closed-test app 404s on the Play *website* and is invisible in
+   the store app to anyone who isn't on the tester list. The button
+   therefore runs a flow — collect the visitor's Google address, enroll it
+   through the backend (which hands it to the desktop sync daemon that
+   edits the Play Console email list), hold while Google propagates, then
+   hand off to the Play Store app.
+
+   Ported from the Cairo Shuttle Bus site's store-activate.js. Because the
+   `csb-web` email list is ACCOUNT-level in Play Console, one enrollment
+   grants access to every app on that developer account — including this
+   one, provided SamaFox's closed track is pointed at that same list.
+   ══════════════════════════════════════════════════════════════════ */
+(function () {
+  'use strict';
+
+  /* ── CONFIGURE ME ─────────────────────────────────────────────────
+     API_BASE  backend origin. The Al Mobarmg site is a different domain
+               from the API, so this must be the absolute URL (the backend
+               sends permissive CORS, so cross-origin works).
+     GOOGLE_CLIENT_ID  leave '' to always use the typed-email field (the
+               reliable path). To enable the one-tap account picker, add
+               THIS page's origin to the OAuth client's "Authorized
+               JavaScript origins" in Google Cloud, then paste the ID here.
+               An unregistered origin makes the picker fail silently.
+     WHATSAPP  support number shown if activation stalls.
+     ──────────────────────────────────────────────────────────────── */
+  var CONFIG = {
+    API_BASE: 'https://api.cairoshuttle-bus.com',
+    GOOGLE_CLIENT_ID: '',
+    WHATSAPP: '201280966484',
+    ACTIVATION_SECONDS: 90,
+    POST_SYNC_SECONDS: 10,
+    POLL_MS: 2000,
+    MAX_HOLD_SECONDS: 75,
+    MAX_EXTRA_EMAILS: 3,
+  };
+
+  var APPS = { samafox: { pkg: 'com.almobarmg.samafox' } };
+  var DEFAULT_APP = 'samafox';
+
+  function playWebUrl(pkg) {
+    return 'https://play.google.com/store/apps/details?id=' + pkg;
+  }
+  function isAndroid() { return /Android/i.test(navigator.userAgent || ''); }
+
+  // A closed-test app does not exist on the Play website — that URL 404s —
+  // so on Android we never fall back to it: ask Chrome to hand off to the
+  // store app (intent:, then market: as a second try) and leave the page
+  // alone if both are refused.
+  function openStore(pkg, onFailed) {
+    if (!isAndroid()) { window.location.href = playWebUrl(pkg); return; }
+
+    var handedOff = false;
+    var onHide = function () { if (document.hidden) handedOff = true; };
+    document.addEventListener('visibilitychange', onHide);
+
+    var go = function (url) {
+      if (handedOff || document.hidden) return;
+      try { window.location.href = url; } catch (e) { /* scheme refused */ }
+    };
+
+    go('intent://details?id=' + pkg + '#Intent;scheme=market;package=com.android.vending;end');
+    setTimeout(function () { go('market://details?id=' + pkg); }, 2500);
+    setTimeout(function () {
+      document.removeEventListener('visibilitychange', onHide);
+      // Chrome only launches another app off a recent tap; a timer-driven
+      // redirect can be refused. Surface a tap target only then.
+      if (!handedOff && !document.hidden && onFailed) onFailed();
+    }, 6000);
+  }
+
+  var STR = {
+    ar: {
+      working: 'جارِ تفعيل التحميل لحسابك…',
+      delayed: 'التفعيل بياخد وقت أطول من المعتاد — هنبعت لك رابط التحميل على بريدك خلال دقائق، وتقدر تسيب الصفحة.',
+      holdlong: 'التفعيل اتأخر شوية — جرّب الزر بالأسفل بعد دقيقة، أو كلمنا واتساب وهنساعدك فورًا.',
+      rejected: 'البريد ده مش حساب Google، فمش هيقدر يحمّل من Google Play. اكتب بريد Google المستخدم على هاتفك.',
+      badEmail: 'من فضلك اكتب بريدًا إلكترونيًا صحيحًا.',
+      generic: 'حدث خطأ، حاول مرة أخرى.',
+      network: 'تعذّر الاتصال — تأكد من الإنترنت وحاول مجددًا.',
+    },
+    en: {
+      working: 'Activating the download for your account…',
+      delayed: 'Activation is taking longer than usual — we’ll email you the download link within minutes. You can leave this page.',
+      holdlong: 'Activation is delayed — try the button below in a minute, or message us on WhatsApp and we’ll help instantly.',
+      rejected: 'That address isn’t a Google account, so it can’t download from Google Play. Type the Google email used on your phone.',
+      badEmail: 'Please enter a valid email address.',
+      generic: 'Something went wrong, please try again.',
+      network: 'Network error — check your connection and try again.',
+    },
+  };
+  function t(k) {
+    var lang = document.documentElement.lang === 'en' ? 'en' : 'ar';
+    return STR[lang][k] || k;
+  }
+
+  function $(id) { return document.getElementById(id); }
+  // A cached page can pair with a fresh script (and vice versa), so never
+  // assume an element exists: one TypeError kills the click handler and the
+  // button silently stops working.
+  function setDisplay(id, v) { var el = $(id); if (el) el.style.display = v; }
+  function setHidden(id, v) { var el = $(id); if (el) el.hidden = v; }
+
+  var state = {
+    app: DEFAULT_APP, emails: [], pkg: '', synced: false, delayed: false,
+    rejected: false, deadline: 0, holdStart: 0,
+    tick: null, poll: null, onVisible: null, manualTimer: null,
+  };
+
+  /* ── Google account picker (optional) ───────────────────────────── */
+  // Google blocks its sign-in UI inside in-app browsers (WhatsApp,
+  // Instagram, Facebook) — exactly where most shared links get opened — so
+  // detect those and go straight to the typed-email stage.
+  function isWebview() {
+    var ua = navigator.userAgent || '';
+    return /FBAN|FBAV|FB_IAB|Instagram|Line\/|Twitter|WhatsApp|; wv\)/i.test(ua);
+  }
+  function gisReady() { return !!(window.google && google.accounts && google.accounts.id); }
+
+  function onCredential(resp) {
+    if (!resp || !resp.credential) return;
+    setDisplay('actPickSpin', 'block');
+    enrollAll(null, resp.credential);
+  }
+
+  function showManualStage() {
+    setHidden('actPickerStage', true);
+    setHidden('actFormStage', false);
+    setTimeout(function () { try { $('actEmail').focus(); } catch (e) {} }, 50);
+  }
+
+  // Not every visitor has a Google session in their *browser* (the Play
+  // account lives at OS level), so One Tap can silently fail to appear.
+  // Reveal the typed field alongside it after a short grace period.
+  function armManualFallback() {
+    clearTimeout(state.manualTimer);
+    state.manualTimer = setTimeout(function () {
+      var prog = $('actProgress'), spin = $('actPickSpin'), picker = $('actPickerStage');
+      if (!prog || !picker) return;
+      var idle = prog.hidden && (!spin || spin.style.display !== 'block');
+      if (idle && !picker.hidden) setHidden('actFormStage', false);
+    }, 2500);
+  }
+
+  function tryPicker() {
+    var host = $('actGsiBtn');
+    if (!host || isWebview() || !CONFIG.GOOGLE_CLIENT_ID || !gisReady()) return false;
+    try {
+      google.accounts.id.initialize({
+        client_id: CONFIG.GOOGLE_CLIENT_ID,
+        callback: onCredential,
+        auto_select: true,
+        cancel_on_tap_outside: false,
+      });
+      // One Tap draws the account list over the page, so the visitor never
+      // leaves the modal. We deliberately do NOT render the fallback Google
+      // button: on mobile it opens Google's full sign-in page, and coming
+      // back is a fresh page load that loses the credential — the user
+      // returns to a dead page. The typed field is the fallback instead.
+      host.style.display = 'none';
+      google.accounts.id.prompt(function () {});
+      return true;
+    } catch (e) { return false; }
+  }
+
+  /* ── Modal ──────────────────────────────────────────────────────── */
+  function openModal(app) {
+    state.app = APPS[app] ? app : DEFAULT_APP;
+    state.pkg = APPS[state.app].pkg;
+    resetStages();
+    setHidden('actOverlay', false);
+    document.body.style.overflow = 'hidden';
+
+    if (tryPicker()) {
+      setHidden('actPickerStage', false);
+      setHidden('actFormStage', true);
+      setDisplay('actPickSpin', 'none');
+      armManualFallback();
+      return;
+    }
+    // GIS may still be loading — retry briefly before giving up.
+    if (!gisReady() && !isWebview() && CONFIG.GOOGLE_CLIENT_ID) {
+      var waited = 0;
+      var iv = setInterval(function () {
+        waited += 300;
+        if (gisReady() && tryPicker()) {
+          clearInterval(iv);
+          setHidden('actPickerStage', false);
+          setDisplay('actPickSpin', 'none');
+          armManualFallback();
+        } else if (waited >= 2500) { clearInterval(iv); }
+      }, 300);
+    }
+    showManualStage();
+  }
+
+  function closeModal() {
+    stopTimers();
+    setHidden('actOverlay', true);
+    document.body.style.overflow = '';
+  }
+
+  function resetStages() {
+    stopTimers();
+    setHidden('actPickerStage', true);
+    setHidden('actFormStage', false);
+    setHidden('actProgress', true);
+    setHidden('actErr', true);
+    setHidden('actSpin', true);
+    setDisplay('actPickSpin', 'none');
+    setHidden('actOpenPlay', true);
+    setHidden('actSwitch', true);
+    setHidden('actDelayedWa', true);
+    setDisplay('actTitle', 'block');
+    if ($('actGo')) $('actGo').removeAttribute('disabled');
+  }
+
+  function stopTimers() {
+    clearInterval(state.tick);
+    clearInterval(state.poll);
+    clearTimeout(state.manualTimer);
+    if (state.onVisible) {
+      document.removeEventListener('visibilitychange', state.onVisible);
+      state.onVisible = null;
+    }
+  }
+
+  function showErr(msg) { var b = $('actErr'); if (b) { b.textContent = msg; b.hidden = false; } }
+
+  function addExtraInput() {
+    var extra = $('actExtra');
+    if (extra.querySelectorAll('input').length >= CONFIG.MAX_EXTRA_EMAILS) return;
+    var input = document.createElement('input');
+    input.className = 'act-input';
+    input.type = 'email';
+    input.inputMode = 'email';
+    input.placeholder = 'another-account@gmail.com';
+    extra.appendChild(input);
+    input.focus();
+  }
+
+  function collectEmails() {
+    var emails = [], seen = {};
+    var inputs = [$('actEmail')].concat(
+      Array.prototype.slice.call($('actExtra').querySelectorAll('input'))
+    );
+    for (var i = 0; i < inputs.length; i++) {
+      var v = (inputs[i].value || '').trim().toLowerCase();
+      if (!v) continue;
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) return { error: true };
+      if (!seen[v]) { seen[v] = true; emails.push(v); }
+    }
+    if (!emails.length) return { error: true };
+    return { emails: emails };
+  }
+
+  /* ── Enroll, then run the activation state machine ──────────────── */
+  function enrollAll(emails, idToken) {
+    setHidden('actErr', true);
+    if (!idToken) {
+      setHidden('actSpin', false);
+      if ($('actGo')) $('actGo').setAttribute('disabled', 'disabled');
+    }
+
+    var allSynced = true, delayedNow = false, resolved = [];
+    var payloads = idToken
+      ? [{ idToken: idToken }]
+      : emails.map(function (e) { return { email: e }; });
+
+    var chain = Promise.resolve();
+    payloads.forEach(function (payload) {
+      chain = chain.then(function () {
+        payload.source = 'site-samafox';
+        return fetch(CONFIG.API_BASE + '/api/beta/enroll', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        }).then(function (r) {
+          return r.json().then(function (b) {
+            if (!r.ok) throw new Error((b && b.error && b.error.message) || t('generic'));
+            if (!b.playSynced) allSynced = false;
+            if (b.delayed) delayedNow = true;
+            if (b.email) resolved.push(b.email);
+          });
+        });
+      });
+    });
+
+    chain.then(function () {
+      state.emails = resolved.length ? resolved : emails || [];
+      startProgress(allSynced);
+      // The server already knows activation can't happen right now (its sync
+      // worker is down) — say so immediately rather than spinning first.
+      if (delayedNow && !allSynced) { state.delayed = true; showDelayed(); }
+    }).catch(function (err) {
+      setHidden('actSpin', true);
+      setDisplay('actPickSpin', 'none');
+      if ($('actGo')) $('actGo').removeAttribute('disabled');
+      showErr(err && err.message ? err.message : t('network'));
+      if (idToken) showManualStage(); // a failed picker must not dead-end
+    });
+  }
+
+  function finish() {
+    stopTimers();
+    setHidden('actWarn', true);
+    setDisplay('actProgSpin', 'none');
+    if ($('actOpenPlay')) $('actOpenPlay').href = playWebUrl(state.pkg);
+    setHidden('actOpenPlay', false);
+    setHidden('actSwitch', false);
+
+    // Android deliberately does NOT auto-launch: Chrome only hands off to
+    // another app on a fresh tap, so a timer-driven launch is met with its
+    // "Continue to Google Play Store?" interstitial. That's a tap either
+    // way, so spend it on our own button, which opens the store directly.
+    if (!isAndroid()) openStore(state.pkg);
+  }
+
+  function showDelayed() {
+    setDisplay('actStatus', 'block');
+    if ($('actStatus')) $('actStatus').innerHTML = t('delayed');
+    setHidden('actWarn', true);
+    var wa = $('actDelayedWa');
+    if (wa) { wa.href = 'https://wa.me/' + CONFIG.WHATSAPP; wa.hidden = false; }
+  }
+
+  // Everything runs off wall-clock deadlines rather than a decrementing
+  // counter: background tabs get their timers throttled (a phone user
+  // switching apps mid-wait would see the countdown freeze), so each tick —
+  // and every return to the foreground — recomputes from Date.now().
+  function render() {
+    var now = Date.now();
+    if (now < state.deadline) return;
+
+    if (state.synced) { finish(); return; }
+
+    // Play refused the address — it isn't a Google account. Waiting longer
+    // can never help, so say so and let them try another.
+    if (state.rejected) {
+      stopTimers();
+      setDisplay('actProgSpin', 'none');
+      setHidden('actWarn', true);
+      setDisplay('actStatus', 'block');
+      if ($('actStatus')) $('actStatus').innerHTML = t('rejected');
+      setHidden('actFormStage', false);
+      setHidden('actProgress', true);
+      if ($('actEmail')) $('actEmail').value = '';
+      if ($('actGo')) $('actGo').removeAttribute('disabled');
+      return;
+    }
+
+    if (state.delayed) showDelayed();
+    if (now - state.holdStart >= CONFIG.MAX_HOLD_SECONDS * 1000) {
+      stopTimers();
+      setDisplay('actProgSpin', 'none');
+      setDisplay('actStatus', 'block');
+      if ($('actStatus')) $('actStatus').innerHTML = t('holdlong');
+      setHidden('actWarn', true);
+      if ($('actOpenPlay')) $('actOpenPlay').href = playWebUrl(state.pkg);
+      setHidden('actOpenPlay', false);
+      setHidden('actSwitch', false);
+    }
+  }
+
+  function startProgress(alreadySynced) {
+    // The waiting stage is deliberately bare: a spinner and a "stay here"
+    // note. A visible countdown only invites the user to watch the clock.
+    setHidden('actPickerStage', true);
+    setHidden('actFormStage', true);
+    setDisplay('actTitle', 'none');
+    setHidden('actProgress', false);
+    state.synced = !!alreadySynced;
+    state.delayed = false;
+    state.rejected = false;
+    state.holdStart = Date.now();
+    // Already whitelisted (returning visitor): only propagation remains.
+    state.deadline = Date.now() +
+      (state.synced ? CONFIG.POST_SYNC_SECONDS : CONFIG.ACTIVATION_SECONDS) * 1000;
+    setDisplay('actProgSpin', 'block');
+    render();
+
+    state.tick = setInterval(render, 1000);
+    // A throttled background tab can skip ticks entirely — catch up the
+    // moment the user comes back.
+    state.onVisible = function () { if (!document.hidden) render(); };
+    document.addEventListener('visibilitychange', state.onVisible);
+
+    state.poll = setInterval(function () {
+      var checks = state.emails.map(function (email) {
+        return fetch(CONFIG.API_BASE + '/api/beta/enroll/status?email=' + encodeURIComponent(email))
+          .then(function (r) { return r.json(); })
+          .catch(function () { return null; });
+      });
+      Promise.all(checks).then(function (results) {
+        var all = true, delayed = false, rejected = false;
+        for (var i = 0; i < results.length; i++) {
+          var b = results[i];
+          if (!b || !b.synced) all = false;
+          if (b && b.delayed) delayed = true;
+          if (b && b.rejected) rejected = true;
+        }
+        // Surface an outage as soon as the server reports one, rather than
+        // holding the news until the countdown lapses.
+        if (delayed && !state.delayed) showDelayed();
+        state.delayed = delayed;
+        if (rejected) { state.rejected = true; render(); return; }
+        if (all && !state.synced) {
+          state.synced = true;
+          clearInterval(state.poll);
+          // Whitelisting is the slow part; once it lands only Google's
+          // propagation remains (~20s measured). Don't make the user sit
+          // out the rest of the original estimate.
+          var propagated = Date.now() + CONFIG.POST_SYNC_SECONDS * 1000;
+          if (Date.now() >= state.deadline || propagated < state.deadline) {
+            state.deadline = propagated;
+          }
+          render();
+        }
+      });
+    }, CONFIG.POLL_MS);
+  }
+
+  /* ── Page chrome: language, clamp, screenshots, sticky bar ─────── */
+  var EN = {
+    'nav.back': 'All apps',
+    'hero.dev': 'Al Mobarmg',
+    'hero.tagline': 'Social voice chat · Live rooms · Gifts & frames',
+    'cta.get': 'GET',
+    'cta.note': 'Free · on Google Play',
+    'meta.status': 'Status', 'meta.statusV': 'NEW', 'meta.statusSub': 'Beta',
+    'meta.category': 'Category', 'meta.categorySub': 'Social',
+    'meta.version': 'Version',
+    'meta.dev': 'Developer',
+    'meta.lang': 'Language', 'meta.langSub': '+ AR',
+    'sec.preview': 'Preview',
+    'sec.about': 'About',
+    'about.p1': 'SamaFox is a social voice-chat app — join a room, take a mic, and talk with real people in real time.',
+    'about.p2': 'Host your own room, control the seats and mics, and send gifts to friends live on air. Your profile grows with the frames and relations you earn in the community.',
+    'about.p3': 'Fully Arabic interface, light on your phone, and built for everyday use.',
+    'about.more': 'more',
+    'sec.features': 'Features',
+    'f1.t': 'Live voice rooms', 'f1.d': 'Mic seats with full control — lock, unlock, and invite speakers.',
+    'f2.t': 'Gifts on air', 'f2.d': 'Send a gift to anyone in the room and everyone sees it instantly.',
+    'f3.t': 'Frames & relations', 'f3.d': 'Decorate your profile with frames and build relations in the community.',
+    'f4.t': 'Chat & follow', 'f4.d': 'Private messages, following, and fast search for rooms and people.',
+    'sec.new': "What's New",
+    'new.body': 'Voice-room performance improvements, new gifts and frames, and general stability fixes.',
+    'sec.info': 'Information',
+    'info.dev': 'Developer', 'info.version': 'Version', 'info.pkg': 'App ID',
+    'info.compat': 'Compatibility', 'info.compatV': 'Android',
+    'info.langs': 'Languages', 'info.langsV': 'Arabic, English',
+    'foot.store': 'App store',
+    'am.title': 'Activate your Google Play download',
+    'am.pick': 'Pick the Google account used on your phone — one tap, no typing.',
+    'am.manual': 'or type your email',
+    'am.sub': 'Type the Google email used on your phone — activation is automatic and takes about a minute.',
+    'am.add': '+ Add another account on the same phone',
+    'am.go': 'Activate & download',
+    'am.note': 'Important: use the same account signed into Google Play on your phone',
+    'am.working': 'Activating the download for your account…',
+    'am.stay': 'Opening Google Play — stay on this page',
+    'am.open': 'Open Google Play',
+    'am.wa': 'Message us on WhatsApp',
+    'am.switch': "If the app isn't visible in the store: tap your profile picture (top of Play Store) and switch to the account you registered here, then open the link again.",
+  };
+  var AR = {}; // filled from the DOM on first load
+
+  function applyLang(lang) {
+    var html = document.documentElement;
+    html.lang = lang;
+    html.dir = lang === 'en' ? 'ltr' : 'rtl';
+    var map = lang === 'en' ? EN : AR;
+    Array.prototype.forEach.call(document.querySelectorAll('[data-i18n]'), function (el) {
+      var v = map[el.getAttribute('data-i18n')];
+      if (v != null) el.textContent = v;
+    });
+    var btn = $('sfLang');
+    if (btn) btn.textContent = lang === 'en' ? 'ع' : 'EN';
+    try { localStorage.setItem('sf_lang', lang); } catch (e) {}
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    // Snapshot the Arabic copy that lives inline in the HTML, so the toggle
+    // can restore it without duplicating every string in JS.
+    Array.prototype.forEach.call(document.querySelectorAll('[data-i18n]'), function (el) {
+      AR[el.getAttribute('data-i18n')] = el.textContent;
+    });
+    var saved = null;
+    try { saved = localStorage.getItem('sf_lang'); } catch (e) {}
+    if (saved === 'en') applyLang('en');
+
+    var lang = $('sfLang');
+    if (lang) lang.addEventListener('click', function () {
+      applyLang(document.documentElement.lang === 'en' ? 'ar' : 'en');
+    });
+
+    var year = $('sfYear');
+    if (year) year.textContent = new Date().getFullYear();
+
+    // Description clamp toggle.
+    var more = $('sfMore'), desc = $('sfDesc');
+    if (more && desc) more.addEventListener('click', function () {
+      var open = !desc.classList.contains('sf-clamp');
+      desc.classList.toggle('sf-clamp', open);
+      more.textContent = open
+        ? (document.documentElement.lang === 'en' ? 'more' : 'المزيد')
+        : (document.documentElement.lang === 'en' ? 'less' : 'أقل');
+    });
+
+    // Screenshots: swap any missing file for a styled placeholder so the
+    // page never shows a broken image before real shots are added.
+    Array.prototype.forEach.call(document.querySelectorAll('.sf-shot'), function (img) {
+      img.addEventListener('error', function () {
+        var ph = document.createElement('div');
+        ph.className = 'sf-shot sf-shot-ph';
+        ph.innerHTML = '<span>🦊</span><div>' + (img.getAttribute('data-ph') || '') + '</div>';
+        if (img.parentNode) img.parentNode.replaceChild(ph, img);
+      });
+    });
+
+    // Sticky bar appears once the hero CTA scrolls out of view (mobile only,
+    // gated in CSS by the .sf-sticky display rules).
+    var hero = document.querySelector('.sf-hero-cta');
+    var sticky = $('sfSticky');
+    if (hero && sticky && 'IntersectionObserver' in window) {
+      new IntersectionObserver(function (entries) {
+        sticky.classList.toggle('is-on', !entries[0].isIntersecting && window.innerWidth <= 720);
+      }, { threshold: 0 }).observe(hero);
+    }
+
+    // ── Activation wiring ──
+    var overlay = $('actOverlay');
+    if (!overlay) return;
+
+    Array.prototype.forEach.call(document.querySelectorAll('.js-play-activate'), function (btn) {
+      btn.addEventListener('click', function () { openModal(btn.getAttribute('data-app')); });
+    });
+
+    $('actClose').addEventListener('click', closeModal);
+    overlay.addEventListener('click', function (ev) { if (ev.target === overlay) closeModal(); });
+    document.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Escape' && !overlay.hidden) closeModal();
+    });
+
+    $('actAddMore').addEventListener('click', addExtraInput);
+    $('actManualLink').addEventListener('click', showManualStage);
+
+    // The href stays a normal web link (long-press, copy, no-JS), but a plain
+    // tap should land in the Play Store app.
+    if ($('actOpenPlay')) {
+      $('actOpenPlay').addEventListener('click', function (ev) {
+        if (!isAndroid() || !state.pkg) return;
+        ev.preventDefault(); // a real tap gives Chrome the activation it needs
+        openStore(state.pkg);
+      });
+    }
+
+    $('actForm').addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      var res = collectEmails();
+      if (res.error) { showErr(t('badEmail')); return; }
+      enrollAll(res.emails, null);
+    });
+  });
+})();
+</script>
+</body>
+</html>
