@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Al Mobarmg — المبرمج</title>
+<meta name="description" content="Al Mobarmg — بيت برمجة مصري: تطبيقات موبايل وأنظمة تشغيل ذكية. Cairo Shuttle Bus · SamaFox" />
+
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Al Mobarmg — المبرمج" />
+<meta property="og:description" content="بيت برمجة مصري: تطبيقات موبايل وأنظمة تشغيل ذكية." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet" />
+
+<style>
+:root {
+  --bg: #0b0d12;
+  --surface: #141822;
+  --surface-2: #1c2130;
+  --line: rgba(255, 255, 255, 0.1);
+  --accent: #4f8cff;
+  --accent-2: #7c5cff;
+  --ink: #eef2f8;
+  --muted: #9aa6bd;
+  --max: 1040px;
+}
+* , *::before, *::after { box-sizing: border-box; }
+:where(h1, h2, h3, p, ul, figure) { margin: 0; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Cairo', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  line-height: 1.8;
+  -webkit-font-smoothing: antialiased;
+}
+img { max-width: 100%; display: block; }
+.wrap { max-width: var(--max); margin: 0 auto; padding: 0 22px; }
+
+/* ── Top bar ─────────────────────────────────────────────── */
+.topbar {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 14px 22px;
+  background: rgba(11, 13, 18, 0.85);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--line);
+}
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 800; letter-spacing: -0.2px; }
+.brand-mark {
+  width: 32px; height: 32px; border-radius: 9px; flex: none;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  display: grid; place-items: center; color: #fff; font-size: 0.85rem; font-weight: 800;
+}
+.lang {
+  background: transparent; border: 1px solid var(--line); color: var(--ink);
+  border-radius: 999px; padding: 5px 15px; font: inherit; font-size: 0.82rem;
+  font-weight: 700; cursor: pointer;
+}
+.lang:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── Hero ────────────────────────────────────────────────── */
+.hero { padding: clamp(48px, 9vw, 96px) 0 clamp(32px, 6vw, 64px); }
+.hero h1 {
+  font-size: clamp(2rem, 6vw, 3.4rem); font-weight: 800; line-height: 1.25;
+  letter-spacing: -0.8px;
+  background: linear-gradient(120deg, var(--ink) 30%, var(--accent));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.hero p { color: var(--muted); font-size: clamp(1rem, 2.4vw, 1.15rem); margin-top: 14px !important; max-width: 60ch; }
+.cta-row { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 26px; }
+.btn {
+  display: inline-block; text-decoration: none; font: inherit; font-weight: 700;
+  border-radius: 999px; padding: 12px 26px; border: 1px solid transparent;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.btn-primary {
+  color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  box-shadow: 0 10px 26px rgba(79, 140, 255, 0.28);
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 14px 32px rgba(79, 140, 255, 0.4); }
+.btn-ghost { color: var(--ink); border-color: var(--line); }
+.btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── Sections ────────────────────────────────────────────── */
+section { padding: clamp(34px, 6vw, 64px) 0; border-top: 1px solid var(--line); }
+.h2 { font-size: clamp(1.3rem, 3.4vw, 1.7rem); font-weight: 800; margin-bottom: 8px !important; }
+.sub { color: var(--muted); margin-bottom: 26px !important; }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 18px; padding: 22px;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.card:hover { border-color: rgba(79, 140, 255, 0.5); transform: translateY(-3px); }
+.card h3 { font-size: 1.1rem; font-weight: 800; margin-bottom: 6px !important; }
+.card p { color: var(--muted); font-size: 0.94rem; }
+.ico { font-size: 1.7rem; margin-bottom: 10px; }
+
+/* Product cards */
+.product {
+  display: grid; grid-template-columns: 68px 1fr; gap: 18px; align-items: start;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 20px; padding: 22px; text-decoration: none; color: inherit;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.product:hover { border-color: rgba(124, 92, 255, 0.55); transform: translateY(-3px); }
+.product-icon {
+  width: 68px; height: 68px; border-radius: 17px; display: grid; place-items: center;
+  font-size: 1.8rem; font-weight: 800; color: #fff;
+}
+.product h3 { font-size: 1.15rem; font-weight: 800; }
+.product .tag {
+  display: inline-block; font-size: 0.72rem; font-weight: 700; color: var(--accent);
+  border: 1px solid rgba(79, 140, 255, 0.4); border-radius: 999px;
+  padding: 1px 10px; margin-bottom: 6px;
+}
+.product p { color: var(--muted); font-size: 0.94rem; margin-top: 4px !important; }
+.product .go { color: var(--accent); font-weight: 700; font-size: 0.9rem; margin-top: 10px !important; }
+
+footer {
+  border-top: 1px solid var(--line); padding: 28px 0 40px;
+  color: var(--muted); font-size: 0.88rem;
+}
+footer a { color: var(--accent); text-decoration: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .btn, .card, .product { transition: none; }
+}
+</style>
+</head>
+
+<body>
+  <div class="topbar">
+    <div class="brand">
+      <span class="brand-mark">AM</span>
+      <span data-i18n="brand">Al Mobarmg</span>
+    </div>
+    <button type="button" class="lang" id="lang">EN</button>
+  </div>
+
+  <div class="wrap">
+    <header class="hero">
+      <h1 data-i18n="hero.h1">نبني برمجيات تشتغل في الواقع</h1>
+      <p data-i18n="hero.p">Al Mobarmg بيت برمجة مصري. بنصمّم ونطوّر تطبيقات موبايل وأنظمة تشغيل ذكية — من فكرة على ورق، لمنتج شغّال بين إيد آلاف المستخدمين.</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="#products" data-i18n="hero.cta1">شوف منتجاتنا</a>
+        <a class="btn btn-ghost" href="#contact" data-i18n="hero.cta2">كلّمنا</a>
+      </div>
+    </header>
+
+    <section id="products">
+      <h2 class="h2" data-i18n="prod.h">منتجاتنا</h2>
+      <p class="sub" data-i18n="prod.sub">منتجات حقيقية، شغّالة، وبتخدم مستخدمين فعليين.</p>
+
+      <div class="grid">
+        <a class="product" href="/samafox/">
+          <div class="product-icon" style="background:linear-gradient(135deg,#5b21b6,#a21caf)">🦊</div>
+          <div>
+            <span class="tag" data-i18n="prod.sf.tag">دردشة صوتية</span>
+            <h3>SamaFox</h3>
+            <p data-i18n="prod.sf.p">غرف صوتية حية، مقاعد مايك، هدايا وإطارات — مجتمع عربي بالكامل.</p>
+            <p class="go" data-i18n="prod.more">التفاصيل والتحميل ←</p>
+          </div>
+        </a>
+
+        <a class="product" href="https://cairoshuttle-bus.com" target="_blank" rel="noopener">
+          <div class="product-icon" style="background:linear-gradient(135deg,#b8860b,#f0c24b);color:#1a0b2e">🚌</div>
+          <div>
+            <span class="tag" data-i18n="prod.csb.tag">نقل ذكي</span>
+            <h3>Cairo Shuttle Bus</h3>
+            <p data-i18n="prod.csb.p">منظومة نقل جماعي ذكية: حجز مقاعد، تتبّع مباشر، اشتراكات، ونقل مدارس وشركات.</p>
+            <p class="go" data-i18n="prod.visit">زيارة الموقع ←</p>
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="h2" data-i18n="do.h">بنشتغل في إيه</h2>
+      <p class="sub" data-i18n="do.sub">من التصميم للتشغيل — مش بس كود.</p>
+      <div class="grid">
+        <div class="card">
+          <div class="ico">📱</div>
+          <h3 data-i18n="do.1.t">تطبيقات موبايل</h3>
+          <p data-i18n="do.1.p">تطبيقات أندرويد و iOS بواجهات عربية كاملة، سريعة وخفيفة على الأجهزة المتوسطة.</p>
+        </div>
+        <div class="card">
+          <div class="ico">⚙️</div>
+          <h3 data-i18n="do.2.t">أنظمة خلفية</h3>
+          <p data-i18n="do.2.p">APIs، قواعد بيانات، وتتبّع لحظي — مبنية للتحمّل، مش للعرض.</p>
+        </div>
+        <div class="card">
+          <div class="ico">📊</div>
+          <h3 data-i18n="do.3.t">لوحات تحكم</h3>
+          <p data-i18n="do.3.p">لوحات إدارة كاملة: تشغيل، حسابات، تقارير، وخرائط مباشرة.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="contact">
+      <h2 class="h2" data-i18n="c.h">تواصل معنا</h2>
+      <p class="sub" data-i18n="c.sub">عندك فكرة أو مشروع؟ ابعتلنا.</p>
+      <!-- EDIT ME: put the real contact channels here (email / WhatsApp / socials).
+           Left deliberately empty rather than inventing details. -->
+      <div class="card">
+        <p data-i18n="c.p">أضف هنا وسيلة التواصل الرسمية (بريد إلكتروني أو واتساب).</p>
+      </div>
+    </section>
+
+    <footer>
+      <p>© <span id="year"></span> Al Mobarmg — <span data-i18n="foot">كل الحقوق محفوظة</span></p>
+    </footer>
+  </div>
+
+<script>
+(function () {
+  'use strict';
+
+  var EN = {
+    'brand': 'Al Mobarmg',
+    'hero.h1': 'We build software that works in the real world',
+    'hero.p': 'Al Mobarmg is an Egyptian software house. We design and build mobile apps and smart operating platforms — from an idea on paper to a product in the hands of thousands of users.',
+    'hero.cta1': 'See our products',
+    'hero.cta2': 'Talk to us',
+    'prod.h': 'Our products',
+    'prod.sub': 'Real products, live, serving real users.',
+    'prod.sf.tag': 'Voice chat',
+    'prod.sf.p': 'Live voice rooms, mic seats, gifts and frames — a fully Arabic community.',
+    'prod.csb.tag': 'Smart transit',
+    'prod.csb.p': 'A smart mass-transit platform: seat booking, live tracking, subscriptions, school and corporate transport.',
+    'prod.more': 'Details & download →',
+    'prod.visit': 'Visit the site →',
+    'do.h': 'What we do',
+    'do.sub': 'From design to operations — not just code.',
+    'do.1.t': 'Mobile apps',
+    'do.1.p': 'Android and iOS apps with full Arabic interfaces, fast and light on mid-range devices.',
+    'do.2.t': 'Backend systems',
+    'do.2.p': 'APIs, databases and live tracking — built to hold up, not to demo.',
+    'do.3.t': 'Dashboards',
+    'do.3.p': 'Complete admin panels: operations, accounts, reports and live maps.',
+    'c.h': 'Get in touch',
+    'c.sub': 'Got an idea or a project? Send it over.',
+    'c.p': 'Add your official contact channel here (email or WhatsApp).',
+    'foot': 'All rights reserved',
+  };
+  var AR = {};
+
+  function $(id) { return document.getElementById(id); }
+
+  function apply(lang) {
+    var html = document.documentElement;
+    html.lang = lang;
+    html.dir = lang === 'en' ? 'ltr' : 'rtl';
+    var map = lang === 'en' ? EN : AR;
+    Array.prototype.forEach.call(document.querySelectorAll('[data-i18n]'), function (el) {
+      var v = map[el.getAttribute('data-i18n')];
+      if (v != null) el.textContent = v;
+    });
+    var b = $('lang');
+    if (b) b.textContent = lang === 'en' ? 'ع' : 'EN';
+    try { localStorage.setItem('am_lang', lang); } catch (e) {}
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    // Snapshot the Arabic copy that lives inline, so the toggle can restore it
+    // without duplicating every string in JS.
+    Array.prototype.forEach.call(document.querySelectorAll('[data-i18n]'), function (el) {
+      AR[el.getAttribute('data-i18n')] = el.textContent;
+    });
+    var saved = null;
+    try { saved = localStorage.getItem('am_lang'); } catch (e) {}
+    if (saved === 'en') apply('en');
+
+    var b = $('lang');
+    if (b) b.addEventListener('click', function () {
+      apply(document.documentElement.lang === 'en' ? 'ar' : 'en');
+    });
+
+    var y = $('year');
+    if (y) y.textContent = new Date().getFullYear();
+  });
+})();
+</script>
+</body>
+</html>
